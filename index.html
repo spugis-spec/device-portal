@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Staff Mobile Device Collection Portal</title>
+<style>
+  :root{
+    --navy:#122542;
+    --blue:#1e3f9e;
+    --blue-deep:#16327f;
+    --blue-light:#eaf1ff;
+    --green:#1b8a5a;
+    --green-light:#e6f7ee;
+    --red:#c0392b;
+    --red-light:#fdecea;
+    --grey:#6b7280;
+    --border:#e2e6ec;
+    --bg:#f4f6fa;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg);
+    color:#1a1f2b;
+  }
+
+  /* ---------- LOGIN SCREEN ---------- */
+  #loginScreen{
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px 16px;
+    background:linear-gradient(160deg,#1e3f9e,#123072 70%);
+  }
+  .login-card{
+    background:#fff;
+    width:100%;
+    max-width:380px;
+    border-radius:18px;
+    padding:32px 26px 28px;
+    box-shadow:0 20px 40px rgba(0,0,0,.25);
+    text-align:center;
+  }
+  .login-logo{
+    width:74px;
+    height:74px;
+    margin:0 auto 14px;
+    border-radius:14px;
+    background:var(--blue-light);
+    color:var(--blue-deep);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-weight:800;
+    font-size:.75rem;
+    letter-spacing:.5px;
+    text-align:center;
+    line-height:1.2;
+  }
+  /* Replace .login-logo contents with <img src="your-logo.png"> for a real logo */
+  .login-card h1{
+    font-size:1.25rem;
+    margin:6px 0 6px;
+    color:var(--navy);
+  }
+  .login-card .sub{
+    color:var(--grey);
+    font-size:.85rem;
+    margin-bottom:22px;
+    line-height:1.4;
+  }
+  .login-card label{
+    display:block;
+    text-align:left;
+    font-size:.82rem;
+    font-weight:700;
+    margin-bottom:6px;
+    color:#333;
+  }
+  .login-card input{
+    width:100%;
+    padding:13px 14px;
+    border:1px solid var(--border);
+    border-radius:10px;
+    font-size:.95rem;
+    background:#fbfcfe;
+    margin-bottom:14px;
+  }
+  .login-card input:focus{
+    outline:none;
+    border-color:var(--blue);
+    background:#fff;
+  }
+  .login-card button{
+    width:100%;
+    padding:14px;
+    border:none;
+    border-radius:10px;
+    background:var(--blue-deep);
+    color:#fff;
+    font-size:.95rem;
+    font-weight:700;
+    letter-spacing:.4px;
+    cursor:pointer;
+  }
+  .login-card button:disabled{ background:#9db0dd; cursor:not-allowed; }
+  .login-msg{
+    margin-top:14px;
+    font-size:.83rem;
+    padding:9px 10px;
+    border-radius:8px;
+    display:none;
+  }
+  .login-msg.show.err{ display:block; background:var(--red-light); color:var(--red); }
+  .login-msg.show.ok{ display:block; background:var(--green-light); color:var(--green); }
+  .login-foot{
+    margin-top:16px;
+    font-size:.72rem;
+    color:#9aa4b2;
+  }
+  .pin-hint{
+    font-size:.72rem;
+    color:var(--grey);
+    margin:-8px 0 14px;
+    text-align:left;
+  }
+
+  /* ---------- MAIN APP ---------- */
+  #appScreen{ display:none; }
+  header{
+    background:var(--navy);
+    color:#fff;
+    padding:16px 16px 14px;
+    text-align:center;
+    position:relative;
+  }
+  header h1{ margin:0; font-size:1.15rem; font-weight:700; }
+  header p{ margin:4px 0 0; font-size:.78rem; color:#b7c4dd; }
+  .user-bar{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    margin-top:8px;
+    font-size:.78rem;
+    color:#dbe4f8;
+  }
+  .role-badge{
+    background:rgba(255,255,255,.15);
+    padding:2px 9px;
+    border-radius:20px;
+    font-weight:700;
+    font-size:.68rem;
+    letter-spacing:.3px;
+  }
+  .logout-link{
+    color:#ff9d8d;
+    text-decoration:underline;
+    cursor:pointer;
+    font-weight:600;
+  }
+
+  nav{
+    display:flex;
+    background:#fff;
+    border-bottom:1px solid var(--border);
+    position:sticky;
+    top:0;
+    z-index:10;
+    overflow-x:auto;
+  }
+  nav button{
+    flex:1;
+    min-width:80px;
+    padding:13px 4px;
+    border:none;
+    background:none;
+    font-size:.82rem;
+    font-weight:600;
+    color:var(--grey);
+    cursor:pointer;
+    border-bottom:3px solid transparent;
+    white-space:nowrap;
+  }
+  nav button.active{ color:var(--blue); border-bottom:3px solid var(--blue); }
+
+  main{ max-width:560px; margin:0 auto; padding:16px; }
+  .card{
+    background:#fff;
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:18px;
+    margin-bottom:14px;
+    box-shadow:0 1px 2px rgba(0,0,0,.03);
+  }
+  .card h2{ margin:0 0 4px; font-size:1.05rem; }
+  .card .sub{ color:var(--grey); font-size:.82rem; margin-bottom:14px; }
+  label{ display:block; font-size:.82rem; font-weight:600; margin:12px 0 5px; color:#333; }
+  input, select{
+    width:100%;
+    padding:11px 12px;
+    border:1px solid var(--border);
+    border-radius:8px;
+    font-size:.95rem;
+    background:#fbfcfe;
+  }
+  input:focus, select:focus{ outline:none; border-color:var(--blue); background:#fff; }
+  .staff-preview{ margin-top:8px; font-size:.85rem; padding:8px 10px; border-radius:7px; display:none; }
+  .staff-preview.ok{ display:block; background:var(--green-light); color:var(--green); }
+  .staff-preview.err{ display:block; background:var(--red-light); color:var(--red); }
+  button.action{
+    width:100%; margin-top:16px; padding:13px; border:none; border-radius:8px;
+    background:var(--blue); color:#fff; font-size:.95rem; font-weight:700; cursor:pointer;
+  }
+  button.action:disabled{ background:#a9c1f0; cursor:not-allowed; }
+  button.action.secondary{ background:var(--navy); }
+  .msg{ margin-top:12px; padding:10px 12px; border-radius:8px; font-size:.87rem; display:none; }
+  .msg.show.ok{ display:block; background:var(--green-light); color:var(--green); }
+  .msg.show.err{ display:block; background:var(--red-light); color:var(--red); }
+  .divider{ border-top:1px dashed var(--border); margin:18px 0; }
+  .badge{ display:inline-block; font-size:.7rem; font-weight:700; padding:2px 8px; border-radius:20px; }
+  .badge.out{ background:var(--red-light); color:var(--red); }
+  .badge.in{ background:var(--green-light); color:var(--green); }
+  .badge.role-Admin{ background:#efe4fb; color:#6b21a8; }
+  .badge.role-Receiver{ background:var(--blue-light); color:var(--blue-deep); }
+  .badge.role-Staff{ background:#eef1f5; color:var(--grey); }
+  table{ width:100%; border-collapse:collapse; font-size:.8rem; }
+  th,td{ text-align:left; padding:8px 6px; border-bottom:1px solid var(--border); }
+  th{ color:var(--grey); font-weight:600; font-size:.7rem; text-transform:uppercase; }
+  .empty{ text-align:center; color:var(--grey); font-size:.85rem; padding:20px 0; }
+  .spinner{ display:none; text-align:center; padding:10px 0; color:var(--grey); font-size:.82rem; }
+  .spinner.show{ display:block; }
+  .config-warning{
+    background:#fff4e5; color:#8a5300; border:1px solid #ffe0ad; border-radius:8px;
+    padding:10px 12px; font-size:.82rem; margin-bottom:14px;
+  }
+  .staff-row{ cursor:pointer; }
+  .staff-row:hover{ background:#f7f9fc; }
+  .form-grid{ display:grid; gap:0; }
+  .small-btn{
+    padding:8px 10px; border:1px solid var(--border); background:#fff; border-radius:7px;
+    font-size:.78rem; cursor:pointer; margin-top:8px; margin-right:6px;
+  }
+  .small-btn.danger{ color:var(--red); border-color:#f3c9c3; }
+</style>
+</head>
+<body>
+
+<!-- ================= LOGIN SCREEN ================= -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">YOUR<br>LOGO</div>
+    <h1>Staff Device Portal</h1>
+    <div class="sub">Enter your Staff ID to sign in and access the device collection system.</div>
+
+    <div id="loginStep1">
+      <label>Staff ID</label>
+      <input type="text" id="loginIdNo" placeholder="e.g. STF-1023" autocomplete="off">
+      <button id="btnLoginCheck">Check</button>
+    </div>
+
+    <div id="loginStep2" style="display:none;">
+      <label id="loginNameLabel">Enter your PIN</label>
+      <div class="pin-hint">Your role requires a PIN for extra security.</div>
+      <input type="password" id="loginPin" placeholder="4-digit PIN" inputmode="numeric" maxlength="8">
+      <button id="btnLoginPin">Sign In</button>
+    </div>
+
+    <div class="login-msg" id="loginMsg"></div>
+    <div class="login-foot">Staff Mobile Device Collection Portal</div>
+  </div>
+</div>
+
+<!-- ================= MAIN APP ================= -->
+<div id="appScreen">
+  <header>
+    <h1>Staff Mobile Device Collection Portal</h1>
+    <p>Sign devices out and back in with your ID card number</p>
+    <div class="user-bar">
+      <span id="userNameDisplay"></span>
+      <span class="role-badge" id="userRoleBadge"></span>
+      <span class="logout-link" id="btnLogout">Log out</span>
+    </div>
+  </header>
+
+  <nav id="tabNav">
+    <button class="tab-btn active" data-tab="checkout">Check Out</button>
+    <button class="tab-btn" data-tab="checkin" id="navCheckin" style="display:none;">Check In</button>
+    <button class="tab-btn" data-tab="viewlog">View Log</button>
+    <button class="tab-btn" data-tab="admin" id="navAdmin" style="display:none;">Admin</button>
+  </nav>
+
+  <main>
+    <div id="configWarning" class="config-warning" style="display:none;">
+      ⚠️ Backend not connected yet. Set <b>SCRIPT_URL</b> near the bottom of this file to your deployed Apps Script Web App URL.
+    </div>
+
+    <!-- CHECK OUT TAB -->
+    <section id="tab-checkout" class="tab-panel">
+      <div class="card">
+        <h2>Collect a Device</h2>
+        <div class="sub">Select the device you are taking. Logged in as you.</div>
+        <label>Device</label>
+        <select id="outDevice"><option value="">Loading devices...</option></select>
+        <button class="action" id="btnCheckout">Confirm Collection</button>
+        <div class="msg" id="checkoutMsg"></div>
+      </div>
+    </section>
+
+    <!-- CHECK IN TAB (Receiver / Admin only) -->
+    <section id="tab-checkin" class="tab-panel" style="display:none;">
+      <div class="card">
+        <h2>Return a Device</h2>
+        <div class="sub">Confirm your ID + PIN again (second authentication), then record who is physically handing the device back.</div>
+
+        <label>Device Being Returned</label>
+        <select id="inDevice"><option value="">Select a device currently out...</option></select>
+
+        <label>Submitting Staff's ID Card Number</label>
+        <input type="text" id="inSubmitterId" placeholder="ID of person handing back the device" autocomplete="off">
+        <div class="staff-preview" id="submitterPreview"></div>
+
+        <div class="divider"></div>
+        <label>Re-enter Your ID (Receiver Confirmation)</label>
+        <input type="text" id="inReceiverId" placeholder="Your ID card number" autocomplete="off">
+        <label>Re-enter Your PIN</label>
+        <input type="password" id="inReceiverPin" placeholder="Your PIN" inputmode="numeric">
+
+        <button class="action" id="btnCheckin">Confirm Device Received</button>
+        <div class="msg" id="checkinMsg"></div>
+      </div>
+    </section>
+
+    <!-- VIEW LOG TAB -->
+    <section id="tab-viewlog" class="tab-panel" style="display:none;">
+      <div class="card">
+        <h2>Daily Collection Log</h2>
+        <div class="sub">Pick a date to view who signed out and returned devices.</div>
+        <label>Date</label>
+        <input type="date" id="logDate">
+        <button class="action" id="btnLoadLog">View Log</button>
+        <div class="spinner" id="logSpinner">Loading...</div>
+      </div>
+
+      <div class="card" id="stillOutCard" style="display:none;">
+        <h2>Still Out <span class="badge out" id="stillOutCount">0</span></h2>
+        <table id="stillOutTable">
+          <thead><tr><th>Device</th><th>Collected By</th><th>Time Out</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="card" id="fullLogCard" style="display:none;">
+        <h2>Full Log for this Date</h2>
+        <table id="fullLogTable">
+          <thead><tr><th>Device</th><th>Collected By</th><th>Out</th><th>Status</th><th>Return Info</th><th>In</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="empty" id="logEmpty" style="display:none;">No records found for this date.</div>
+    </section>
+
+    <!-- ADMIN TAB (Admin only) -->
+    <section id="tab-admin" class="tab-panel" style="display:none;">
+      <div class="card">
+        <h2>Staff & Access Management</h2>
+        <div class="sub">Add or update staff. Assign "Receiver" or "Admin" to authorize them to receive devices — a PIN is required for those roles.</div>
+
+        <label>Staff ID</label>
+        <input type="text" id="admIdNo" placeholder="e.g. STF-1023">
+        <label>Full Name</label>
+        <input type="text" id="admName" placeholder="Full name">
+        <label>Phone</label>
+        <input type="text" id="admPhone" placeholder="Phone number">
+        <label>Role</label>
+        <select id="admRole">
+          <option value="Staff">Staff (check out only)</option>
+          <option value="Receiver">Receiver (can also receive/check in)</option>
+          <option value="Admin">Admin (full access)</option>
+        </select>
+        <div id="admPinWrap">
+          <label>PIN (required for Receiver / Admin)</label>
+          <input type="text" id="admPin" placeholder="e.g. 1234" inputmode="numeric">
+        </div>
+
+        <button class="action" id="btnAdmSave">Save Staff</button>
+        <button class="action secondary" id="btnAdmClear" type="button">Clear Form</button>
+        <div class="msg" id="admMsg"></div>
+      </div>
+
+      <div class="card">
+        <h2>All Staff</h2>
+        <div class="sub">Tap a row to edit it.</div>
+        <div class="spinner" id="admSpinner">Loading...</div>
+        <table id="admTable">
+          <thead><tr><th>ID</th><th>Name</th><th>Role</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+/* ======================================================
+   SET THIS to your deployed Google Apps Script Web App URL
+   Example: https://script.google.com/macros/s/AKfycb.../exec
+   ====================================================== */
+const SCRIPT_URL = "PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE";
+
+if (!SCRIPT_URL || SCRIPT_URL.indexOf("PASTE_") === 0) {
+  document.getElementById('configWarning').style.display = 'block';
+}
+
+async function callApi(payload) {
+  const res = await fetch(SCRIPT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // avoids CORS preflight
+    body: JSON.stringify(payload)
+  });
+  return res.json();
+}
+
+// ---------- SESSION ----------
+let currentUser = null; // { idNo, name, role, pin }
+
+function saveSession() {
+  sessionStorage.setItem('mdcUser', JSON.stringify(currentUser));
+}
+function loadSession() {
+  const s = sessionStorage.getItem('mdcUser');
+  if (s) currentUser = JSON.parse(s);
+}
+function clearSession() {
+  currentUser = null;
+  sessionStorage.removeItem('mdcUser');
+}
+
+function showMsg(el, text, ok) {
+  el.textContent = text;
+  el.className = 'msg show ' + (ok ? 'ok' : 'err');
+}
+function showPreview(el, text, ok) {
+  el.textContent = text;
+  el.className = 'staff-preview ' + (ok ? 'ok' : 'err');
+}
+function todayISO() {
+  return new Date().toISOString().split('T')[0];
+}
+
+// ---------- LOGIN FLOW ----------
+let pendingIdNo = null;
+
+document.getElementById('btnLoginCheck').addEventListener('click', async () => {
+  const idNo = document.getElementById('loginIdNo').value.trim();
+  const msg = document.getElementById('loginMsg');
+  if (!idNo) { showMsg(msg, 'Enter your Staff ID.', false); return; }
+
+  const btn = document.getElementById('btnLoginCheck');
+  btn.disabled = true; btn.textContent = 'Checking...';
+  try {
+    const r = await callApi({ action: 'login', idNo });
+    if (!r.success) {
+      showMsg(msg, r.message, false);
+    } else if (r.requiresPin) {
+      pendingIdNo = idNo;
+      document.getElementById('loginStep1').style.display = 'none';
+      document.getElementById('loginStep2').style.display = 'block';
+      document.getElementById('loginNameLabel').textContent = 'Welcome, ' + r.name + ' — enter your PIN';
+      msg.className = 'login-msg';
+    } else {
+      currentUser = { idNo, name: r.name, role: r.role, pin: '' };
+      saveSession();
+      enterApp();
+    }
+  } catch (e) {
+    showMsg(msg, 'Network error. Check SCRIPT_URL / connection.', false);
+  }
+  btn.disabled = false; btn.textContent = 'Check';
+});
+
+document.getElementById('btnLoginPin').addEventListener('click', async () => {
+  const pin = document.getElementById('loginPin').value.trim();
+  const msg = document.getElementById('loginMsg');
+  if (!pin) { showMsg(msg, 'Enter your PIN.', false); return; }
+
+  const btn = document.getElementById('btnLoginPin');
+  btn.disabled = true; btn.textContent = 'Signing in...';
+  try {
+    const r = await callApi({ action: 'verifyPin', idNo: pendingIdNo, pin });
+    if (r.success) {
+      currentUser = { idNo: pendingIdNo, name: r.name, role: r.role, pin };
+      saveSession();
+      enterApp();
+    } else {
+      showMsg(msg, r.message, false);
+    }
+  } catch (e) {
+    showMsg(msg, 'Network error. Try again.', false);
+  }
+  btn.disabled = false; btn.textContent = 'Sign In';
+});
+
+document.getElementById('btnLogout').addEventListener('click', () => {
+  clearSession();
+  location.reload();
+});
+
+function enterApp() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appScreen').style.display = 'block';
+  document.getElementById('userNameDisplay').textContent = currentUser.name;
+  document.getElementById('userRoleBadge').textContent = currentUser.role;
+  document.getElementById('userRoleBadge').className = 'role-badge role-' + currentUser.role;
+
+  document.getElementById('navCheckin').style.display =
+    (currentUser.role === 'Receiver' || currentUser.role === 'Admin') ? 'block' : 'none';
+  document.getElementById('navAdmin').style.display =
+    (currentUser.role === 'Admin') ? 'block' : 'none';
+
+  loadDeviceDropdown();
+  loadCheckedOutDropdown();
+}
+
+// ---------- TAB SWITCHING ----------
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.tab-panel').forEach(p => p.style.display = 'none');
+    document.getElementById('tab-' + btn.dataset.tab).style.display = 'block';
+    if (btn.dataset.tab === 'admin') loadAdminStaffList();
+  });
+});
+
+// ---------- DEVICE LISTS ----------
+async function loadDeviceDropdown() {
+  const sel = document.getElementById('outDevice');
+  try {
+    const r = await callApi({ action: 'getDevices' });
+    sel.innerHTML = '<option value="">Select a device...</option>';
+    if (r.success) r.devices.forEach(d => {
+      const opt = document.createElement('option'); opt.value = d; opt.textContent = d;
+      sel.appendChild(opt);
+    });
+  } catch (e) { sel.innerHTML = '<option value="">Could not load devices</option>'; }
+}
+
+async function loadCheckedOutDropdown() {
+  const sel = document.getElementById('inDevice');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">Loading...</option>';
+  try {
+    const r = await callApi({ action: 'getCheckedOutDevices', date: todayISO() });
+    sel.innerHTML = '<option value="">Select a device currently out...</option>';
+    if (r.success) {
+      if (r.devices.length === 0) sel.innerHTML = '<option value="">No devices currently checked out</option>';
+      else r.devices.forEach(d => {
+        const opt = document.createElement('option'); opt.value = d; opt.textContent = d;
+        sel.appendChild(opt);
+      });
+    }
+  } catch (e) { sel.innerHTML = '<option value="">Could not load list</option>'; }
+}
+
+// ---------- CHECKOUT ----------
+document.getElementById('btnCheckout').addEventListener('click', async () => {
+  const device = document.getElementById('outDevice').value;
+  const msg = document.getElementById('checkoutMsg');
+  const btn = document.getElementById('btnCheckout');
+  if (!device) { showMsg(msg, 'Please select a device.', false); return; }
+
+  btn.disabled = true; btn.textContent = 'Saving...';
+  try {
+    const r = await callApi({ action: 'checkout', idNo: currentUser.idNo, device });
+    showMsg(msg, r.message, r.success);
+    if (r.success) loadDeviceDropdown();
+  } catch (e) { showMsg(msg, 'Network error. Please try again.', false); }
+  btn.disabled = false; btn.textContent = 'Confirm Collection';
+});
+
+// ---------- SUBMITTER ID PREVIEW (checkin tab) ----------
+let subTimer;
+const submitterInput = document.getElementById('inSubmitterId');
+if (submitterInput) submitterInput.addEventListener('input', (e) => {
+  clearTimeout(subTimer);
+  const val = e.target.value.trim();
+  const preview = document.getElementById('submitterPreview');
+  preview.className = 'staff-preview';
+  if (!val) return;
+  subTimer = setTimeout(async () => {
+    const r = await callApi({ action: 'login', idNo: val });
+    if (r.success) showPreview(preview, '✓ ' + r.name, true);
+    else showPreview(preview, r.message, false);
+  }, 450);
+});
+
+// ---------- CHECKIN ----------
+const btnCheckin = document.getElementById('btnCheckin');
+if (btnCheckin) btnCheckin.addEventListener('click', async () => {
+  const device = document.getElementById('inDevice').value;
+  const submitterId = document.getElementById('inSubmitterId').value.trim();
+  const receiverId = document.getElementById('inReceiverId').value.trim();
+  const receiverPin = document.getElementById('inReceiverPin').value.trim();
+  const msg = document.getElementById('checkinMsg');
+  const btn = document.getElementById('btnCheckin');
+
+  if (!device || !submitterId || !receiverId || !receiverPin) {
+    showMsg(msg, 'Please fill in the device, submitting staff ID, and your ID + PIN.', false);
+    return;
+  }
+  btn.disabled = true; btn.textContent = 'Saving...';
+  try {
+    const r = await callApi({ action: 'checkin', device, submitterId, receiverId, receiverPin });
+    showMsg(msg, r.message, r.success);
+    if (r.success) {
+      document.getElementById('inSubmitterId').value = '';
+      document.getElementById('inReceiverId').value = '';
+      document.getElementById('inReceiverPin').value = '';
+      document.getElementById('submitterPreview').className = 'staff-preview';
+      loadCheckedOutDropdown();
+    }
+  } catch (e) { showMsg(msg, 'Network error. Please try again.', false); }
+  btn.disabled = false; btn.textContent = 'Confirm Device Received';
+});
+
+// ---------- VIEW LOG ----------
+document.getElementById('logDate').value = todayISO();
+document.getElementById('btnLoadLog').addEventListener('click', async () => {
+  const date = document.getElementById('logDate').value;
+  if (!date) return;
+  const spinner = document.getElementById('logSpinner');
+  const stillOutCard = document.getElementById('stillOutCard');
+  const fullLogCard = document.getElementById('fullLogCard');
+  const emptyMsg = document.getElementById('logEmpty');
+
+  spinner.classList.add('show');
+  stillOutCard.style.display = 'none';
+  fullLogCard.style.display = 'none';
+  emptyMsg.style.display = 'none';
+
+  try {
+    const r = await callApi({ action: 'getLogsByDate', date });
+    spinner.classList.remove('show');
+    if (!r.success || r.logs.length === 0) { emptyMsg.style.display = 'block'; return; }
+
+    const stillOut = r.logs.filter(l => l.status === 'Out');
+    const stillOutBody = document.querySelector('#stillOutTable tbody');
+    stillOutBody.innerHTML = '';
+    document.getElementById('stillOutCount').textContent = stillOut.length;
+    if (stillOut.length > 0) {
+      stillOut.forEach(l => {
+        stillOutBody.innerHTML += `<tr><td>${l.device}</td><td>${l.nameOut}</td><td>${l.timeOut}</td></tr>`;
+      });
+      stillOutCard.style.display = 'block';
+    }
+
+    const fullBody = document.querySelector('#fullLogTable tbody');
+    fullBody.innerHTML = '';
+    r.logs.forEach(l => {
+      const badge = l.status === 'Out' ? '<span class="badge out">Out</span>' : '<span class="badge in">Returned</span>';
+      fullBody.innerHTML += `<tr>
+        <td>${l.device}</td><td>${l.nameOut}</td><td>${l.timeOut}</td>
+        <td>${badge}</td><td>${l.receivedInfo || '-'}</td><td>${l.timeIn || '-'}</td>
+      </tr>`;
+    });
+    fullLogCard.style.display = 'block';
+  } catch (e) {
+    spinner.classList.remove('show');
+    emptyMsg.textContent = 'Could not load log. Check your connection.';
+    emptyMsg.style.display = 'block';
+  }
+});
+
+// ---------- ADMIN PANEL ----------
+function togglePinField() {
+  const role = document.getElementById('admRole').value;
+  document.getElementById('admPinWrap').style.display = (role === 'Staff') ? 'none' : 'block';
+}
+document.getElementById('admRole').addEventListener('change', togglePinField);
+togglePinField();
+
+document.getElementById('btnAdmClear').addEventListener('click', () => {
+  document.getElementById('admIdNo').value = '';
+  document.getElementById('admName').value = '';
+  document.getElementById('admPhone').value = '';
+  document.getElementById('admRole').value = 'Staff';
+  document.getElementById('admPin').value = '';
+  togglePinField();
+  document.getElementById('admMsg').className = 'msg';
+});
+
+document.getElementById('btnAdmSave').addEventListener('click', async () => {
+  const idNo = document.getElementById('admIdNo').value.trim();
+  const name = document.getElementById('admName').value.trim();
+  const phone = document.getElementById('admPhone').value.trim();
+  const role = document.getElementById('admRole').value;
+  const pin = document.getElementById('admPin').value.trim();
+  const msg = document.getElementById('admMsg');
+
+  if (!idNo || !name) { showMsg(msg, 'Staff ID and Name are required.', false); return; }
+  if (role !== 'Staff' && !pin) { showMsg(msg, 'A PIN is required for Receiver/Admin roles.', false); return; }
+
+  const btn = document.getElementById('btnAdmSave');
+  btn.disabled = true; btn.textContent = 'Saving...';
+  try {
+    const r = await callApi({
+      action: 'adminSaveStaff',
+      adminId: currentUser.idNo, adminPin: currentUser.pin,
+      idNo, name, phone, role, pin
+    });
+    showMsg(msg, r.message, r.success);
+    if (r.success) loadAdminStaffList();
+  } catch (e) { showMsg(msg, 'Network error. Please try again.', false); }
+  btn.disabled = false; btn.textContent = 'Save Staff';
+});
+
+async function loadAdminStaffList() {
+  const spinner = document.getElementById('admSpinner');
+  const tbody = document.querySelector('#admTable tbody');
+  spinner.classList.add('show');
+  tbody.innerHTML = '';
+  try {
+    const r = await callApi({ action: 'adminGetStaff', adminId: currentUser.idNo, adminPin: currentUser.pin });
+    spinner.classList.remove('show');
+    if (!r.success) { tbody.innerHTML = `<tr><td colspan="3">${r.message}</td></tr>`; return; }
+    r.staff.forEach(s => {
+      const tr = document.createElement('tr');
+      tr.className = 'staff-row';
+      tr.innerHTML = `<td>${s.idNo}</td><td>${s.name}</td><td><span class="badge role-${s.role}">${s.role}</span></td>`;
+      tr.addEventListener('click', () => {
+        document.getElementById('admIdNo').value = s.idNo;
+        document.getElementById('admName').value = s.name;
+        document.getElementById('admPhone').value = s.phone;
+        document.getElementById('admRole').value = s.role;
+        document.getElementById('admPin').value = s.pin;
+        togglePinField();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+      tbody.appendChild(tr);
+    });
+  } catch (e) {
+    spinner.classList.remove('show');
+    tbody.innerHTML = '<tr><td colspan="3">Could not load staff list.</td></tr>';
+  }
+}
+
+// ---------- INIT ----------
+loadSession();
+if (currentUser) enterApp();
+</script>
+
+</body>
+</html>
