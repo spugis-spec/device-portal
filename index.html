@@ -315,7 +315,6 @@
           return Promise.all([
             loadScript(base+'firebase-firestore-compat.js'),
             loadScript(base+'firebase-auth-compat.js'),
-            loadScript(base+'firebase-functions-compat.js'),
           ]);
         });
     chain.then(function(){
@@ -340,7 +339,15 @@
     }).catch(function(e){ fbStat('Could not load Firebase: '+(e.message||e)); });
   }
   function fbSaveRecord(rec){ if(fbReady&&FS) FS.collection('records').doc(rec.id).set(JSON.parse(JSON.stringify(rec))).catch(function(e){fbStat('Cloud write error: '+e.message)}); }
-  function callFn(name,data){ return window.firebase.functions().httpsCallable(name)(data); }
+  var ADMIN_EMAIL='admin@device-portal.local';
+  var RECEIVER_EMAIL='receiver@device-portal.local';
+  function authErr(e){
+    var c=e&&e.code;
+    if(c==='auth/wrong-password'||c==='auth/invalid-credential'||c==='auth/invalid-login-credentials') return 'Incorrect PIN.';
+    if(c==='auth/too-many-requests') return 'Too many attempts — wait a bit and try again.';
+    if(c==='auth/user-not-found') return 'No PIN has been set up yet in Firebase Authentication.';
+    return (e&&e.message)||'Sign-in failed.';
+  }
   function fbSaveSettings(){
     if(!(fbReady&&FS)) return;
     FS.collection('portal').doc('settings').set({
@@ -440,23 +447,21 @@
     var m=$('sMsg'), id=norm($('sRec').value), pin=$('sPin').value.trim();
     if(!id) return msg(m,'Enter the receiving officer ID card number.',false);
     if(!pin) return msg(m,'Enter the receiving officer PIN.',false);
+    var listed=false;
+    for(var i=0;i<db.receivers.length;i++) if(norm(db.receivers[i])===id) listed=true;
+    if(!listed) return msg(m,'This ID is not authorised to receive devices.',false);
     $('sUnlock').disabled=true;
     if(fbReady){
-      callFn('verifyPin',{role:'receiver',idcard:id,pin:pin}).then(function(res){
-        return window.firebase.auth().signInWithCustomToken(res.data.token);
-      }).then(function(){
+      window.firebase.auth().signInWithEmailAndPassword(RECEIVER_EMAIL,pin).then(function(){
         $('sUnlock').disabled=false; $('sPin').value='';
         var s=findStaff(id);
         msg(m,'Access granted to '+(s?s[1]:id)+'.',true); $('sPanel').style.display='block'; fillOutstanding();
       }).catch(function(e){
         $('sUnlock').disabled=false;
-        msg(m,(e&&e.message)||'Access denied.',false);
+        msg(m,authErr(e),false);
       });
     } else {
       $('sUnlock').disabled=false;
-      var ok=false;
-      for(var i=0;i<db.receivers.length;i++) if(norm(db.receivers[i])===id) ok=true;
-      if(!ok) return msg(m,'This ID is not authorised to receive devices.',false);
       if(pin!==db.rpin) return msg(m,'Second authentication failed (wrong PIN).',false);
       var s=findStaff(id);
       msg(m,'Access granted to '+(s?s[1]:id)+'.',true); $('sPanel').style.display='block'; fillOutstanding();
@@ -520,10 +525,11 @@
     $('aDevs').value=db.devices.join('\n');
     $('aRec').value=db.receivers.join(', ');
     if(fbReady){
-      $('aRpin').value=''; $('aRpin').placeholder='Leave blank to keep current PIN';
-      $('aApin').value=''; $('aApin').placeholder='Leave blank to keep current PIN';
+      $('aApin').value=''; $('aApin').placeholder='Leave blank to keep current PIN (min 6 chars)';
+      $('aRpin').value=''; $('aRpin').disabled=true;
+      $('aRpin').placeholder='Change in Firebase Console → Authentication → receiver@device-portal.local';
     } else {
-      $('aRpin').value=db.rpin; $('aApin').value=db.apin;
+      $('aRpin').value=db.rpin; $('aApin').value=db.apin; $('aRpin').disabled=false;
     }
     $('aUrl').value=db.url||''; $('aFb').value=db.fb||'';
   }
@@ -532,13 +538,13 @@
     if(!pin) return msg($('aMsg'),'Enter the admin PIN.',false);
     $('aBtn').disabled=true;
     if(fbReady){
-      callFn('verifyPin',{role:'admin',pin:pin}).then(function(){
+      window.firebase.auth().signInWithEmailAndPassword(ADMIN_EMAIL,pin).then(function(){
         $('aBtn').disabled=false;
         $('aMsg').className='msg'; $('aPanel').style.display='block';
         fillAdminFields(); renderAdminTable();
       }).catch(function(e){
         $('aBtn').disabled=false;
-        msg($('aMsg'),(e&&e.message)||'Wrong admin PIN.',false);
+        msg($('aMsg'),authErr(e),false);
       });
     } else {
       $('aBtn').disabled=false;
@@ -552,21 +558,23 @@
     db.devices=$('aDevs').value.split('\n').map(function(l){return l.trim()}).filter(Boolean);
     db.receivers=$('aRec').value.split(',').map(function(x){return x.trim()}).filter(Boolean);
     save();
-    var newRpin=$('aRpin').value.trim(), newApin=$('aApin').value.trim();
+    var newApin=$('aApin').value.trim();
     if(fbReady){
       fbSaveSettings();
       var tasks=[];
-      if(newRpin) tasks.push(callFn('setPin',{role:'receiver',newPin:newRpin}));
-      if(newApin) tasks.push(callFn('setPin',{role:'admin',newPin:newApin}));
+      if(newApin){
+        if(newApin.length<6) tasks.push(Promise.reject({message:'Admin PIN must be at least 6 characters (Firebase requirement).'}));
+        else tasks.push(window.firebase.auth().currentUser.updatePassword(newApin));
+      }
       Promise.all(tasks).then(function(){
         fillDevices(); fillOutstanding(); gateStats(); fillAdminFields();
-        msg($('aMsg'),'Settings saved and synced to the cloud.'+(tasks.length?' PIN(s) updated securely.':''),true);
+        msg($('aMsg'),'Settings saved and synced to the cloud.'+(newApin?' Admin PIN updated.':''),true);
       }).catch(function(e){
         fillDevices(); fillOutstanding(); gateStats();
         msg($('aMsg'),'Roster/devices saved, but PIN update failed: '+(e.message||e),false);
       });
     } else {
-      db.rpin=newRpin||db.rpin; db.apin=newApin||db.apin; save();
+      db.rpin=$('aRpin').value.trim()||db.rpin; db.apin=newApin||db.apin; save();
       fillDevices(); fillOutstanding(); gateStats();
       msg($('aMsg'),'Settings saved in this browser.',true);
     }
@@ -672,14 +680,12 @@
     if(!pin) return msg($('gMsg'),'Enter the admin PIN.',false);
     $('gAdminBtn').disabled=true;
     if(fbReady){
-      callFn('verifyPin',{role:'admin',pin:pin}).then(function(res){
-        return window.firebase.auth().signInWithCustomToken(res.data.token);
-      }).then(function(){
+      window.firebase.auth().signInWithEmailAndPassword(ADMIN_EMAIL,pin).then(function(){
         $('gAdminBtn').disabled=false; $('gPin').value='';
         enter({admin:true});
       }).catch(function(e){
         $('gAdminBtn').disabled=false;
-        msg($('gMsg'),(e&&e.message)||'Incorrect admin PIN.',false);
+        msg($('gMsg'),authErr(e),false);
       });
     } else {
       $('gAdminBtn').disabled=false;
