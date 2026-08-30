@@ -6,21 +6,28 @@
 <title>Mobile Device Collection &amp; Tracking Portal</title>
 <style>
   :root{
-    --bg:#0d1b2a; --panel:#132a41; --panel2:#0f2135; --line:#22456b;
-    --ink:#eaf2fb; --muted:#9db4cd; --accent:#f4a300; --accent2:#1b9c85;
+    --bg:#eef4ff; --panel:#ffffff; --panel2:#f4f8fd; --line:#cfdcf5;
+    --ink:#16305c; --muted:#5b7089; --accent:#2a6ae0; --accent2:#1b9c85;
     --danger:#e5484d; --ok:#2fa36b; --radius:14px;
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.45}
-  header{background:linear-gradient(135deg,#0f2135,#1a3d5f);padding:18px 16px;border-bottom:3px solid var(--accent)}
-  header h1{margin:0;font-size:1.15rem;letter-spacing:.3px}
-  header p{margin:4px 0 0;color:var(--muted);font-size:.8rem;text-transform:uppercase;letter-spacing:1px}
+  header{background:linear-gradient(135deg,#12377e,#2a6ae0);padding:18px 16px;border-bottom:3px solid #ffffff}
+  header h1{margin:0;font-size:1.15rem;letter-spacing:.3px;color:#fff}
+  header p{margin:4px 0 0;color:rgba(255,255,255,.78);font-size:.8rem;text-transform:uppercase;letter-spacing:1px}
   main{max-width:920px;margin:0 auto;padding:14px}
-  nav{display:flex;gap:6px;overflow-x:auto;padding:10px 0 4px}
-  nav button{flex:0 0 auto;background:var(--panel);color:var(--muted);border:1px solid var(--line);
+  nav{display:flex;gap:6px;overflow-x:auto;padding:10px;margin-bottom:4px;
+    background:#eef4ff;border:1px solid #cddcfa;border-radius:14px}
+  nav button{flex:0 0 auto;background:#fff;color:#12377e;border:1px solid #cddcfa;
     padding:9px 14px;border-radius:999px;font-size:.85rem;font-weight:600;cursor:pointer}
-  nav button.active{background:var(--accent);color:#20160a;border-color:var(--accent)}
+  nav button.active{background:#12377e;color:#fff;border-color:#12377e}
+  nav button#signOut{background:#fff;color:#c0292d;border-color:#f3c9c9}
+  .idcol{}
+  #lTable.hideid .idcol{display:none}
+  .selfinfo{display:none;margin-top:10px;padding:11px 12px;border-radius:10px;font-size:.85rem;
+    background:rgba(47,163,107,.15);border:1px solid var(--ok);color:var(--ink)}
+  .selfinfo.show{display:block}
   section{display:none;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:16px}
   section.active{display:block}
   h2{margin:0 0 4px;font-size:1rem}
@@ -29,8 +36,8 @@
   input,select,textarea{width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);
     background:var(--panel2);color:var(--ink);font-size:16px}
   button.act{width:100%;margin-top:16px;padding:14px;border:0;border-radius:10px;font-size:1rem;font-weight:700;cursor:pointer;
-    background:var(--accent);color:#20160a}
-  button.act.green{background:var(--accent2);color:#04221c}
+    background:var(--accent);color:#fff}
+  button.act.green{background:var(--accent2);color:#fff}
   button.small{width:auto;margin:0;padding:8px 12px;font-size:.8rem;border-radius:8px;border:1px solid var(--line);
     background:var(--panel2);color:var(--ink);cursor:pointer}
   .row{display:flex;gap:10px;flex-wrap:wrap}
@@ -44,8 +51,8 @@
   th,td{padding:10px 8px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
   th{color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.6px}
   .pill{padding:3px 9px;border-radius:999px;font-size:.72rem;font-weight:700}
-  .pill.out{background:rgba(244,163,0,.18);color:var(--accent)}
-  .pill.in{background:rgba(47,163,107,.18);color:#5fd39b}
+  .pill.out{background:rgba(244,163,0,.16);color:#a35b00}
+  .pill.in{background:rgba(47,163,107,.16);color:#177a4d}
   .stats{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
   .stat{flex:1 1 100px;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px}
   .stat b{display:block;font-size:1.5rem}
@@ -90,8 +97,9 @@
   .gstats div{flex:1;background:#f4f7fc;border:1px solid #e2e9f4;border-radius:12px;padding:10px 6px}
   .gstats b{display:block;color:#12377e;font-size:1.25rem}
   .gstats small{color:#7b8aa0;font-size:.68rem;text-transform:uppercase;letter-spacing:.5px}
-  .who{margin-top:16px;color:var(--muted);font-size:.78rem}
-  .who b{color:var(--ink)}
+  .who{margin-top:16px;display:inline-block;background:#eef4ff;color:#12377e;
+    font-size:.78rem;padding:7px 12px;border-radius:999px;border:1px solid #cddcfa}
+  .who b{color:#12377e}
   .notice{margin-top:10px;padding:10px;border-radius:10px;font-size:.85rem;display:none}
   .notice.show{display:block;background:rgba(229,72,77,.15);border:1px solid var(--danger)}
   .notice.show.free{background:rgba(47,163,107,.15);border:1px solid var(--ok)}
@@ -143,9 +151,12 @@
   <section id="collect" class="active">
     <h2>Sign out a device</h2>
     <p class="hint">Enter your ID card number and select the device you are collecting.</p>
-    <label for="cId">Staff ID card number</label>
-    <input id="cId" inputmode="numeric" autocomplete="off" placeholder="e.g. AEDC/1234" />
-    <div id="cWho" class="hint" style="margin:6px 0 0"></div>
+    <div id="cIdWrap">
+      <label for="cId">Staff ID card number</label>
+      <input id="cId" inputmode="numeric" autocomplete="off" placeholder="e.g. AEDC/1234" />
+      <div id="cWho" class="hint" style="margin:6px 0 0"></div>
+    </div>
+    <div class="selfinfo" id="cSelfInfo"></div>
     <label for="cDev">Device to collect</label>
     <select id="cDev"><option value="">-- select device --</option></select>
     <div class="notice" id="cAvail"></div>
@@ -160,8 +171,11 @@
   <section id="submit">
     <h2>Receive / return devices</h2>
     <p class="hint">Restricted to the authorised receiving officer. Two-step verification required.</p>
-    <label for="sRec">Receiving officer ID card number</label>
-    <input id="sRec" autocomplete="off" placeholder="Officer ID" />
+    <div id="sRecWrap">
+      <label for="sRec">Receiving officer ID card number</label>
+      <input id="sRec" autocomplete="off" placeholder="Officer ID" />
+    </div>
+    <div class="selfinfo" id="sRecSelfInfo"></div>
     <label for="sPin">Receiving officer PIN (2nd authentication)</label>
     <input id="sPin" type="password" inputmode="numeric" placeholder="PIN" />
     <button class="small" id="sUnlock" style="margin-top:14px">Unlock returns</button>
@@ -189,7 +203,7 @@
     </div>
     <div class="stats" id="lStats"></div>
     <div class="tablewrap"><table id="lTable">
-      <thead><tr><th>Device</th><th>Collected by</th><th>ID card</th><th>Phone</th><th>Out</th><th>Returned</th><th>Submitted by</th><th>Received by</th><th>Status</th><th>Purpose</th></tr></thead>
+      <thead><tr><th>Device</th><th>Collected by</th><th class="idcol">ID card</th><th>Phone</th><th>Out</th><th>Returned</th><th>Submitted by</th><th>Received by</th><th>Status</th><th>Purpose</th></tr></thead>
       <tbody></tbody></table></div>
     <button class="small" id="lCsv" style="margin-top:14px">Download CSV for this date</button>
   </section>
@@ -260,7 +274,7 @@
     devices:["Wale Device","Linda Device","Musa Device","Field Tablet 01"],
     receivers:["AEDC/1003"], rpin:"2468", apin:"1234", url:"", fb:"{\"apiKey\":\"AIzaSyDuAkIFfmLuO_dhfvhI99GZ2vvnoZUqHbU\",\"authDomain\":\"device-collection-database.firebaseapp.com\",\"projectId\":\"device-collection-database\",\"storageBucket\":\"device-collection-database.firebasestorage.app\",\"messagingSenderId\":\"808096059718\",\"appId\":\"1:808096059718:web:bee185d0a2ba4bf1559547\",\"measurementId\":\"G-2LVL2LK8P9\"}", records:[]
   };
-  var db;
+  var db, CURRENT=null;
   try{ db=JSON.parse(localStorage.getItem(K))||JSON.parse(JSON.stringify(DEF)); }
   catch(e){ db=JSON.parse(JSON.stringify(DEF)); }
   if(!db.fb) db.fb=DEF.fb; /* fall back to built-in Firebase config when none saved */
@@ -363,6 +377,11 @@
     for(var i=db.records.length-1;i>=0;i--){var r=db.records[i];if(r.device===dev&&!r.inTime)return r}
     return null;
   }
+  function outstandingFor(idcard){
+    idcard=norm(idcard);
+    for(var i=db.records.length-1;i>=0;i--){var r=db.records[i];if(!r.inTime&&norm(r.idcard)===idcard)return r}
+    return null;
+  }
   function fillDevices(){
     var s=$('cDev'), keep=s.value; s.innerHTML='<option value="">-- select device --</option>';
     for(var i=0;i<db.devices.length;i++){
@@ -396,6 +415,8 @@
     var m=$('cMsg'), s=findStaff($('cId').value), dev=$('cDev').value;
     if(!s) return msg(m,'Invalid ID card number. Contact admin.',false);
     if(!dev) return msg(m,'Please select a device.',false);
+    var mine=outstandingFor(s[0]);
+    if(mine) return msg(m,s[1]+' already has "'+mine.device+'" signed out (since '+mine.date+' '+mine.outTime+') and has not returned it yet. Return that device before collecting another.',false);
     var h=holderOf(dev);
     if(h){ availability(); return msg(m,'Device unavailable — '+dev+' is still with '+h.name+' ('+h.idcard+') since '+h.date+' '+h.outTime+'. Please pick another device.',false); }
     var rec={id:'R'+Date.now(),date:today(),device:dev,idcard:s[0],name:s[1],phone:s[2],
@@ -432,15 +453,19 @@
   function renderLog(){
     var d=$('lDate').value||today(); $('lDate').value=d;
     var f=$('lFilter').value, rows=rowsFor(d), tb=$('lTable').querySelector('tbody'), out=0,i;
+    $('lTable').classList.toggle('hideid', !(CURRENT&&CURRENT.admin));
     tb.innerHTML='';
+    var uniqueDevices={};
     for(i=0;i<rows.length;i++){ var r=rows[i]; if(!r.inTime) out++;
+      uniqueDevices[r.device]=true;
       if(f==='out'&&r.inTime) continue; if(f==='in'&&!r.inTime) continue;
       var tr=document.createElement('tr');
-      tr.innerHTML='<td>'+r.device+'</td><td>'+r.name+'</td><td>'+r.idcard+'</td><td>'+r.phone+'</td><td>'+r.outTime+'</td><td>'+(r.inTime||'—')+'</td><td>'+(r.submittedBy||'—')+'</td><td>'+(r.receivedBy||'—')+'</td><td><span class="pill '+(r.inTime?'in':'out')+'">'+(r.inTime?'Returned':'Outstanding')+'</span></td><td>'+(r.note||'—')+'</td>';
+      tr.innerHTML='<td>'+r.device+'</td><td>'+r.name+'</td><td class="idcol">'+r.idcard+'</td><td>'+r.phone+'</td><td>'+r.outTime+'</td><td>'+(r.inTime||'—')+'</td><td>'+(r.submittedBy||'—')+'</td><td>'+(r.receivedBy||'—')+'</td><td><span class="pill '+(r.inTime?'in':'out')+'">'+(r.inTime?'Returned':'Outstanding')+'</span></td><td>'+(r.note||'—')+'</td>';
       tb.appendChild(tr);
     }
     if(!tb.children.length) tb.innerHTML='<tr><td colspan="10">No records for this date.</td></tr>';
-    $('lStats').innerHTML='<div class="stat"><b>'+rows.length+'</b><span>Signed out</span></div>'+
+    var uniqueCount=Object.keys(uniqueDevices).length;
+    $('lStats').innerHTML='<div class="stat"><b>'+uniqueCount+'</b><span>Signed out</span></div>'+
       '<div class="stat"><b>'+(rows.length-out)+'</b><span>Returned</span></div>'+
       '<div class="stat"><b>'+out+'</b><span>Outstanding</span></div>';
   }
@@ -510,15 +535,37 @@
 
   /* ---------- Login gate ---------- */
   var SK='smdcp_session';
+  function updateIdentityUI(){
+    var loggedInStaff = CURRENT && !CURRENT.admin;
+    if(loggedInStaff){
+      $('cIdWrap').style.display='none';
+      $('cId').value=CURRENT.idcard;
+      $('cSelfInfo').className='selfinfo show';
+      $('cSelfInfo').textContent='Signing out as '+CURRENT.name+' · '+CURRENT.idcard;
+      $('sRecWrap').style.display='none';
+      $('sRec').value=CURRENT.idcard;
+      $('sRecSelfInfo').className='selfinfo show';
+      $('sRecSelfInfo').textContent='Receiving officer: '+CURRENT.name+' · '+CURRENT.idcard;
+    } else {
+      $('cIdWrap').style.display='';
+      $('cSelfInfo').className='selfinfo';
+      $('sRecWrap').style.display='';
+      $('sRecSelfInfo').className='selfinfo';
+      if(!CURRENT){ $('cId').value=''; $('sRec').value=''; }
+    }
+    $('lCsv').style.display = (CURRENT && CURRENT.admin) ? '' : 'none';
+  }
   function enter(session){
     try{ sessionStorage.setItem(SK,JSON.stringify(session)); }catch(e){}
     document.body.className='unlocked';
+    CURRENT=session;
     $('hWho').innerHTML = session.admin
       ? 'Signed in as <b>Administrator</b>'
       : 'Signed in as <b>'+session.name+'</b> · '+session.idcard;
     document.querySelector('nav button[data-tab="admin"]').style.display = session.admin?'':'none';
-    if(!session.admin){ $('cId').value=session.idcard; $('cWho').textContent='✔ '+session.name+' · '+session.phone; }
-    fillDevices(); renderLog();
+    if(!session.admin){ $('cWho').textContent='✔ '+session.name+' · '+session.phone; }
+    updateIdentityUI();
+    fillDevices(); renderLog(); fillOutstanding();
   }
   function gateStats(){
     var free=0,out=0;
@@ -566,6 +613,7 @@
     document.body.className='locked'; $('gId').value=''; $('gPin').value='';
     $('gMsg').className='msg'; $('aPanel').style.display='none'; $('aPin').value='';
     $('sPanel').style.display='none';
+    CURRENT=null; updateIdentityUI();
   };
 
   $('lDate').value=today(); fillDevices(); renderLog(); gateStats();
