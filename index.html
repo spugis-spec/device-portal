@@ -24,7 +24,10 @@
   nav button.active{background:#12377e;color:#fff;border-color:#12377e}
   nav button#signOut{background:#fff;color:#c0292d;border-color:#f3c9c9}
   .idcol{}
-  #lTable.hideid .idcol{display:none}
+  #lTable.hideid .idcol, #lTable.hideid .admincol{display:none}
+  .del-btn{background:rgba(229,72,77,.12);color:var(--danger);border:1px solid rgba(229,72,77,.4);
+    padding:5px 10px;border-radius:8px;font-size:.75rem;font-weight:600;cursor:pointer}
+  .del-btn:hover{background:rgba(229,72,77,.22)}
   .selfinfo{display:none;margin-top:10px;padding:11px 12px;border-radius:10px;font-size:.85rem;
     background:rgba(47,163,107,.15);border:1px solid var(--ok);color:var(--ink)}
   .selfinfo.show{display:block}
@@ -204,7 +207,7 @@
     </div>
     <div class="stats" id="lStats"></div>
     <div class="tablewrap"><table id="lTable">
-      <thead><tr><th>Device</th><th>Collected by</th><th class="idcol">ID card</th><th>Phone</th><th>Out</th><th>Returned</th><th>Submitted by</th><th>Received by</th><th>Status</th><th>Purpose</th></tr></thead>
+      <thead><tr><th>Device</th><th>Collected by</th><th class="idcol">ID card</th><th>Phone</th><th>Out</th><th>Returned</th><th>Submitted by</th><th>Received by</th><th>Status</th><th>Purpose</th><th class="admincol">Action</th></tr></thead>
       <tbody></tbody></table></div>
     <button class="small" id="lCsv" style="margin-top:14px">Download CSV for this date</button>
   </section>
@@ -487,16 +490,38 @@
       uniqueDevices[r.device]=true;
       if(f==='out'&&r.inTime) continue; if(f==='in'&&!r.inTime) continue;
       var tr=document.createElement('tr');
-      tr.innerHTML='<td>'+r.device+'</td><td>'+r.name+'</td><td class="idcol">'+r.idcard+'</td><td>'+r.phone+'</td><td>'+r.outTime+'</td><td>'+(r.inTime||'—')+'</td><td>'+(r.submittedBy||'—')+'</td><td>'+(r.receivedBy||'—')+'</td><td><span class="pill '+(r.inTime?'in':'out')+'">'+(r.inTime?'Returned':'Outstanding')+'</span></td><td>'+(r.note||'—')+'</td>';
+      tr.innerHTML='<td>'+r.device+'</td><td>'+r.name+'</td><td class="idcol">'+r.idcard+'</td><td>'+r.phone+'</td><td>'+r.outTime+'</td><td>'+(r.inTime||'—')+'</td><td>'+(r.submittedBy||'—')+'</td><td>'+(r.receivedBy||'—')+'</td><td><span class="pill '+(r.inTime?'in':'out')+'">'+(r.inTime?'Returned':'Outstanding')+'</span></td><td>'+(r.note||'—')+'</td><td class="admincol"><button class="del-btn" data-id="'+r.id+'">Delete</button></td>';
       tb.appendChild(tr);
     }
-    if(!tb.children.length) tb.innerHTML='<tr><td colspan="10">No records for this date.</td></tr>';
+    if(!tb.children.length) tb.innerHTML='<tr><td colspan="11">No records for this date.</td></tr>';
     var uniqueCount=Object.keys(uniqueDevices).length;
     $('lStats').innerHTML='<div class="stat"><b>'+uniqueCount+'</b><span>Signed out</span></div>'+
       '<div class="stat"><b>'+(rows.length-out)+'</b><span>Returned</span></div>'+
       '<div class="stat"><b>'+out+'</b><span>Outstanding</span></div>';
   }
   $('lDate').onchange=renderLog; $('lFilter').onchange=renderLog;
+
+  function deleteRecord(id){
+    if(!(CURRENT&&CURRENT.admin)) return;
+    if(!fbReady) return alert('Not connected to the cloud — records can\'t be deleted right now.');
+    var rec=null; for(var i=0;i<db.records.length;i++) if(db.records[i].id===id) rec=db.records[i];
+    var label=rec ? (rec.device+' — '+rec.name+' ('+rec.date+' '+rec.outTime+')') : 'this record';
+    var pin=window.prompt('Permanently delete '+label+'?\n\nThis cannot be undone. Enter the admin PIN to confirm:');
+    if(pin===null) return;
+    pin=pin.trim();
+    if(!pin) return;
+    window.firebase.auth().signInWithEmailAndPassword(ADMIN_EMAIL,pin).then(function(){
+      return FS.collection('records').doc(id).delete();
+    }).then(function(){
+      db.records=db.records.filter(function(r){return r.id!==id});
+      save(); fillDevices(); fillOutstanding(); renderLog(); gateStats(); renderAdminTable();
+    }).catch(function(e){
+      alert('Delete cancelled — '+authErr(e));
+    });
+  }
+  $('lTable').querySelector('tbody').addEventListener('click',function(e){
+    if(e.target.classList.contains('del-btn')) deleteRecord(e.target.getAttribute('data-id'));
+  });
 
   function csv(rows,name){
     var h=['Date','Device','Staff name','ID card','Phone','Time out','Time in','Submitted by','Received by','Purpose','Status'],l=[h.join(',')];
