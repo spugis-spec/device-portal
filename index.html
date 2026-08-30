@@ -407,7 +407,10 @@
     for(var i=0;i<db.devices.length;i++){
       var h=holderOf(db.devices[i]);
       var o=document.createElement('option'); o.value=db.devices[i];
-      o.textContent=db.devices[i]+(h?' — UNAVAILABLE (signed out)':' — available'); s.appendChild(o);
+      o.textContent=db.devices[i]+(h?' — UNAVAILABLE (signed out)':' — available');
+      o.style.color = h ? '#c0292d' : '#0f7a4a';
+      o.style.fontWeight = '600';
+      s.appendChild(o);
     }
     s.value=keep; availability();
   }
@@ -439,6 +442,8 @@
     if(mine) return msg(m,s[1]+' already has "'+mine.device+'" signed out (since '+mine.date+' '+mine.outTime+') and has not returned it yet. Return that device before collecting another.',false);
     var h=holderOf(dev);
     if(h){ availability(); return msg(m,'Device unavailable — '+dev+' is still with '+h.name+' ('+h.idcard+') since '+h.date+' '+h.outTime+'. Please pick another device.',false); }
+    var ok=window.confirm('Please confirm:\n\n'+s[1]+' ('+s[0]+')\nis collecting: '+dev+'\n\nClick OK to finalize this collection.');
+    if(!ok) return;
     var rec={id:'R'+Date.now(),date:today(),device:dev,idcard:s[0],name:s[1],phone:s[2],
       outTime:clock(),note:$('cNote').value.trim(),inTime:'',submittedBy:'',receivedBy:''};
     db.records.push(rec); save(); fbSaveRecord(rec); push(Object.assign({action:'collect'},rec));
