@@ -127,6 +127,7 @@
       <button id="gAdminBtn">Sign in as admin</button>
     </div>
     <div class="msg" id="gMsg"></div>
+    <p class="foot" id="gFbStat">Connecting to the cloud…</p>
     <p class="foot">Device Collection &amp; Tracking Portal</p>
   </div>
 </div>
@@ -293,7 +294,7 @@
 
   /* ---------- Firebase (Firestore) cloud database ---------- */
   var FS=null, fbReady=false;
-  function fbStat(t){ var el=$('aFbStat'); if(el) el.textContent=t; }
+  function fbStat(t){ var el=$('aFbStat'); if(el) el.textContent=t; var g=$('gFbStat'); if(g) g.textContent=t; }
   function loadScript(src){ return new Promise(function(res,rej){
     var s=document.createElement('script'); s.src=src; s.onload=res; s.onerror=rej; document.head.appendChild(s); }); }
   function parseCfg(txt){
