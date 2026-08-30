@@ -272,7 +272,7 @@
   var DEF={
     staff:[["AEDC/1001","Wale Adeyemi","08030000001"],["AEDC/1002","Linda Okoro","08030000002"],["AEDC/1003","Musa Ibrahim","08030000003"]],
     devices:["Wale Device","Linda Device","Musa Device","Field Tablet 01"],
-    receivers:["AEDC/1003"], rpin:"2468", apin:"1234", url:"", fb:"{\"apiKey\":\"AIzaSyDuAkIFfmLuO_dhfvhI99GZ2vvnoZUqHbU\",\"authDomain\":\"device-collection-database.firebaseapp.com\",\"projectId\":\"device-collection-database\",\"storageBucket\":\"device-collection-database.firebasestorage.app\",\"messagingSenderId\":\"808096059718\",\"appId\":\"1:808096059718:web:bee185d0a2ba4bf1559547\",\"measurementId\":\"G-2LVL2LK8P9\"}", records:[]
+    receivers:["AEDC/1003"], url:"", fb:"{\"apiKey\":\"AIzaSyDuAkIFfmLuO_dhfvhI99GZ2vvnoZUqHbU\",\"authDomain\":\"device-collection-database.firebaseapp.com\",\"projectId\":\"device-collection-database\",\"storageBucket\":\"device-collection-database.firebasestorage.app\",\"messagingSenderId\":\"808096059718\",\"appId\":\"1:808096059718:web:bee185d0a2ba4bf1559547\",\"measurementId\":\"G-2LVL2LK8P9\"}", records:[]
   };
   var db, CURRENT=null;
   try{ db=JSON.parse(localStorage.getItem(K))||JSON.parse(JSON.stringify(DEF)); }
@@ -450,22 +450,16 @@
     var listed=false;
     for(var i=0;i<db.receivers.length;i++) if(norm(db.receivers[i])===id) listed=true;
     if(!listed) return msg(m,'This ID is not authorised to receive devices.',false);
+    if(!fbReady) return msg(m,'Not connected to the cloud — can\'t verify securely right now. Check your internet connection and try again.',false);
     $('sUnlock').disabled=true;
-    if(fbReady){
-      window.firebase.auth().signInWithEmailAndPassword(RECEIVER_EMAIL,pin).then(function(){
-        $('sUnlock').disabled=false; $('sPin').value='';
-        var s=findStaff(id);
-        msg(m,'Access granted to '+(s?s[1]:id)+'.',true); $('sPanel').style.display='block'; fillOutstanding();
-      }).catch(function(e){
-        $('sUnlock').disabled=false;
-        msg(m,authErr(e),false);
-      });
-    } else {
-      $('sUnlock').disabled=false;
-      if(pin!==db.rpin) return msg(m,'Second authentication failed (wrong PIN).',false);
+    window.firebase.auth().signInWithEmailAndPassword(RECEIVER_EMAIL,pin).then(function(){
+      $('sUnlock').disabled=false; $('sPin').value='';
       var s=findStaff(id);
       msg(m,'Access granted to '+(s?s[1]:id)+'.',true); $('sPanel').style.display='block'; fillOutstanding();
-    }
+    }).catch(function(e){
+      $('sUnlock').disabled=false;
+      msg(m,authErr(e),false);
+    });
   };
 
   $('sBtn').onclick=function(){
@@ -524,34 +518,24 @@
     $('aStaff').value=db.staff.map(function(s){return s.join(', ')}).join('\n');
     $('aDevs').value=db.devices.join('\n');
     $('aRec').value=db.receivers.join(', ');
-    if(fbReady){
-      $('aApin').value=''; $('aApin').placeholder='Leave blank to keep current PIN (min 6 chars)';
-      $('aRpin').value=''; $('aRpin').disabled=true;
-      $('aRpin').placeholder='Change in Firebase Console → Authentication → receiver@device-portal.local';
-    } else {
-      $('aRpin').value=db.rpin; $('aApin').value=db.apin; $('aRpin').disabled=false;
-    }
+    $('aApin').value=''; $('aApin').placeholder='Leave blank to keep current PIN (min 6 chars)';
+    $('aRpin').value=''; $('aRpin').disabled=true;
+    $('aRpin').placeholder='Change in Firebase Console → Authentication → receiver@device-portal.local';
     $('aUrl').value=db.url||''; $('aFb').value=db.fb||'';
   }
   $('aBtn').onclick=function(){
     var pin=$('aPin').value.trim();
     if(!pin) return msg($('aMsg'),'Enter the admin PIN.',false);
+    if(!fbReady) return msg($('aMsg'),'Not connected to the cloud — can\'t verify securely right now. Check your internet connection and try again.',false);
     $('aBtn').disabled=true;
-    if(fbReady){
-      window.firebase.auth().signInWithEmailAndPassword(ADMIN_EMAIL,pin).then(function(){
-        $('aBtn').disabled=false;
-        $('aMsg').className='msg'; $('aPanel').style.display='block';
-        fillAdminFields(); renderAdminTable();
-      }).catch(function(e){
-        $('aBtn').disabled=false;
-        msg($('aMsg'),authErr(e),false);
-      });
-    } else {
+    window.firebase.auth().signInWithEmailAndPassword(ADMIN_EMAIL,pin).then(function(){
       $('aBtn').disabled=false;
-      if(pin!==db.apin){ return msg($('aMsg'),'Wrong admin PIN.',false); }
       $('aMsg').className='msg'; $('aPanel').style.display='block';
       fillAdminFields(); renderAdminTable();
-    }
+    }).catch(function(e){
+      $('aBtn').disabled=false;
+      msg($('aMsg'),authErr(e),false);
+    });
   };
   $('aSave').onclick=function(){
     db.staff=$('aStaff').value.split('\n').map(function(l){return l.split(',').map(function(x){return x.trim()})}).filter(function(a){return a[0]});
@@ -559,25 +543,19 @@
     db.receivers=$('aRec').value.split(',').map(function(x){return x.trim()}).filter(Boolean);
     save();
     var newApin=$('aApin').value.trim();
-    if(fbReady){
-      fbSaveSettings();
-      var tasks=[];
-      if(newApin){
-        if(newApin.length<6) tasks.push(Promise.reject({message:'Admin PIN must be at least 6 characters (Firebase requirement).'}));
-        else tasks.push(window.firebase.auth().currentUser.updatePassword(newApin));
-      }
-      Promise.all(tasks).then(function(){
-        fillDevices(); fillOutstanding(); gateStats(); fillAdminFields();
-        msg($('aMsg'),'Settings saved and synced to the cloud.'+(newApin?' Admin PIN updated.':''),true);
-      }).catch(function(e){
-        fillDevices(); fillOutstanding(); gateStats();
-        msg($('aMsg'),'Roster/devices saved, but PIN update failed: '+(e.message||e),false);
-      });
-    } else {
-      db.rpin=$('aRpin').value.trim()||db.rpin; db.apin=newApin||db.apin; save();
-      fillDevices(); fillOutstanding(); gateStats();
-      msg($('aMsg'),'Settings saved in this browser.',true);
+    fbSaveSettings();
+    var tasks=[];
+    if(newApin){
+      if(newApin.length<6) tasks.push(Promise.reject({message:'Admin PIN must be at least 6 characters (Firebase requirement).'}));
+      else tasks.push(window.firebase.auth().currentUser.updatePassword(newApin));
     }
+    Promise.all(tasks).then(function(){
+      fillDevices(); fillOutstanding(); gateStats(); fillAdminFields();
+      msg($('aMsg'),'Settings saved and synced to the cloud.'+(newApin?' Admin PIN updated.':''),true);
+    }).catch(function(e){
+      fillDevices(); fillOutstanding(); gateStats();
+      msg($('aMsg'),'Roster/devices saved, but PIN update failed: '+(e.message||e),false);
+    });
   };
   $('aStaffFile').onchange=function(){ var inp=this; readFile(inp,function(rows){
     var add=rows.map(function(c){return [c[0]||'',c[1]||'',c[2]||'']}).filter(function(a){return a[0]});
@@ -678,20 +656,15 @@
   $('gAdminBtn').onclick=function(){
     var pin=$('gPin').value.trim();
     if(!pin) return msg($('gMsg'),'Enter the admin PIN.',false);
+    if(!fbReady) return msg($('gMsg'),'Not connected to the cloud — can\'t verify securely right now. Check your internet connection and try again.',false);
     $('gAdminBtn').disabled=true;
-    if(fbReady){
-      window.firebase.auth().signInWithEmailAndPassword(ADMIN_EMAIL,pin).then(function(){
-        $('gAdminBtn').disabled=false; $('gPin').value='';
-        enter({admin:true});
-      }).catch(function(e){
-        $('gAdminBtn').disabled=false;
-        msg($('gMsg'),authErr(e),false);
-      });
-    } else {
-      $('gAdminBtn').disabled=false;
-      if(pin!==db.apin) return msg($('gMsg'),'Incorrect admin PIN.',false);
+    window.firebase.auth().signInWithEmailAndPassword(ADMIN_EMAIL,pin).then(function(){
+      $('gAdminBtn').disabled=false; $('gPin').value='';
       enter({admin:true});
-    }
+    }).catch(function(e){
+      $('gAdminBtn').disabled=false;
+      msg($('gMsg'),authErr(e),false);
+    });
   };
   $('gPin').addEventListener('keydown',function(e){ if(e.key==='Enter') $('gAdminBtn').click(); });
   $('signOut').onclick=function(){
