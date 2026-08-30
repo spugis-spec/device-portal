@@ -312,7 +312,11 @@
     var base='https://www.gstatic.com/firebasejs/10.12.2/';
     var chain = window.firebase ? Promise.resolve()
       : loadScript(base+'firebase-app-compat.js').then(function(){
-          return Promise.all([loadScript(base+'firebase-firestore-compat.js'), loadScript(base+'firebase-auth-compat.js')]);
+          return Promise.all([
+            loadScript(base+'firebase-firestore-compat.js'),
+            loadScript(base+'firebase-auth-compat.js'),
+            loadScript(base+'firebase-functions-compat.js'),
+          ]);
         });
     chain.then(function(){
       if(!window.firebase.apps.length) window.firebase.initializeApp(cfg);
@@ -326,7 +330,6 @@
         if(v.staff) db.staff=v.staff.map(function(s){return [s.idcard,s.name,s.phone]});
         if(v.devices) db.devices=v.devices;
         if(v.receivers) db.receivers=v.receivers;
-        if(v.rpin) db.rpin=v.rpin; if(v.apin) db.apin=v.apin;
         save(); fillDevices(); gateStats();
       },function(e){ fbStat('Cloud read error: '+e.message); });
       FS.collection('records').onSnapshot(function(sn){
@@ -337,11 +340,12 @@
     }).catch(function(e){ fbStat('Could not load Firebase: '+(e.message||e)); });
   }
   function fbSaveRecord(rec){ if(fbReady&&FS) FS.collection('records').doc(rec.id).set(JSON.parse(JSON.stringify(rec))).catch(function(e){fbStat('Cloud write error: '+e.message)}); }
+  function callFn(name,data){ return window.firebase.functions().httpsCallable(name)(data); }
   function fbSaveSettings(){
     if(!(fbReady&&FS)) return;
     FS.collection('portal').doc('settings').set({
       staff: db.staff.map(function(s){return {idcard:s[0]||'',name:s[1]||'',phone:s[2]||''}}),
-      devices: db.devices, receivers: db.receivers, rpin: db.rpin, apin: db.apin
+      devices: db.devices, receivers: db.receivers
     }).then(function(){ fbStat('Settings saved to cloud.'); }).catch(function(e){ fbStat('Cloud write error: '+e.message); });
   }
   function fbPushAll(){
@@ -433,12 +437,30 @@
   };
 
   $('sUnlock').onclick=function(){
-    var m=$('sMsg'), id=norm($('sRec').value), pin=$('sPin').value.trim(), ok=false;
-    for(var i=0;i<db.receivers.length;i++) if(norm(db.receivers[i])===id) ok=true;
-    if(!ok) return msg(m,'This ID is not authorised to receive devices.',false);
-    if(pin!==db.rpin) return msg(m,'Second authentication failed (wrong PIN).',false);
-    var s=findStaff(id);
-    msg(m,'Access granted to '+(s?s[1]:id)+'.',true); $('sPanel').style.display='block'; fillOutstanding();
+    var m=$('sMsg'), id=norm($('sRec').value), pin=$('sPin').value.trim();
+    if(!id) return msg(m,'Enter the receiving officer ID card number.',false);
+    if(!pin) return msg(m,'Enter the receiving officer PIN.',false);
+    $('sUnlock').disabled=true;
+    if(fbReady){
+      callFn('verifyPin',{role:'receiver',idcard:id,pin:pin}).then(function(res){
+        return window.firebase.auth().signInWithCustomToken(res.data.token);
+      }).then(function(){
+        $('sUnlock').disabled=false; $('sPin').value='';
+        var s=findStaff(id);
+        msg(m,'Access granted to '+(s?s[1]:id)+'.',true); $('sPanel').style.display='block'; fillOutstanding();
+      }).catch(function(e){
+        $('sUnlock').disabled=false;
+        msg(m,(e&&e.message)||'Access denied.',false);
+      });
+    } else {
+      $('sUnlock').disabled=false;
+      var ok=false;
+      for(var i=0;i<db.receivers.length;i++) if(norm(db.receivers[i])===id) ok=true;
+      if(!ok) return msg(m,'This ID is not authorised to receive devices.',false);
+      if(pin!==db.rpin) return msg(m,'Second authentication failed (wrong PIN).',false);
+      var s=findStaff(id);
+      msg(m,'Access granted to '+(s?s[1]:id)+'.',true); $('sPanel').style.display='block'; fillOutstanding();
+    }
   };
 
   $('sBtn').onclick=function(){
@@ -496,21 +518,58 @@
   function fillAdminFields(){
     $('aStaff').value=db.staff.map(function(s){return s.join(', ')}).join('\n');
     $('aDevs').value=db.devices.join('\n');
-    $('aRec').value=db.receivers.join(', '); $('aRpin').value=db.rpin; $('aApin').value=db.apin;
+    $('aRec').value=db.receivers.join(', ');
+    if(fbReady){
+      $('aRpin').value=''; $('aRpin').placeholder='Leave blank to keep current PIN';
+      $('aApin').value=''; $('aApin').placeholder='Leave blank to keep current PIN';
+    } else {
+      $('aRpin').value=db.rpin; $('aApin').value=db.apin;
+    }
     $('aUrl').value=db.url||''; $('aFb').value=db.fb||'';
   }
   $('aBtn').onclick=function(){
-    if($('aPin').value.trim()!==db.apin){ return msg($('aMsg'),'Wrong admin PIN.',false); }
-    $('aMsg').className='msg'; $('aPanel').style.display='block';
-    fillAdminFields(); renderAdminTable();
+    var pin=$('aPin').value.trim();
+    if(!pin) return msg($('aMsg'),'Enter the admin PIN.',false);
+    $('aBtn').disabled=true;
+    if(fbReady){
+      callFn('verifyPin',{role:'admin',pin:pin}).then(function(){
+        $('aBtn').disabled=false;
+        $('aMsg').className='msg'; $('aPanel').style.display='block';
+        fillAdminFields(); renderAdminTable();
+      }).catch(function(e){
+        $('aBtn').disabled=false;
+        msg($('aMsg'),(e&&e.message)||'Wrong admin PIN.',false);
+      });
+    } else {
+      $('aBtn').disabled=false;
+      if(pin!==db.apin){ return msg($('aMsg'),'Wrong admin PIN.',false); }
+      $('aMsg').className='msg'; $('aPanel').style.display='block';
+      fillAdminFields(); renderAdminTable();
+    }
   };
   $('aSave').onclick=function(){
     db.staff=$('aStaff').value.split('\n').map(function(l){return l.split(',').map(function(x){return x.trim()})}).filter(function(a){return a[0]});
     db.devices=$('aDevs').value.split('\n').map(function(l){return l.trim()}).filter(Boolean);
     db.receivers=$('aRec').value.split(',').map(function(x){return x.trim()}).filter(Boolean);
-    db.rpin=$('aRpin').value.trim()||db.rpin;
-    db.apin=$('aApin').value.trim()||db.apin; save(); fbSaveSettings(); fillDevices(); fillOutstanding(); gateStats();
-    msg($('aMsg'),'Settings saved'+(fbReady?' and synced to the cloud.':' in this browser.'),true);
+    save();
+    var newRpin=$('aRpin').value.trim(), newApin=$('aApin').value.trim();
+    if(fbReady){
+      fbSaveSettings();
+      var tasks=[];
+      if(newRpin) tasks.push(callFn('setPin',{role:'receiver',newPin:newRpin}));
+      if(newApin) tasks.push(callFn('setPin',{role:'admin',newPin:newApin}));
+      Promise.all(tasks).then(function(){
+        fillDevices(); fillOutstanding(); gateStats(); fillAdminFields();
+        msg($('aMsg'),'Settings saved and synced to the cloud.'+(tasks.length?' PIN(s) updated securely.':''),true);
+      }).catch(function(e){
+        fillDevices(); fillOutstanding(); gateStats();
+        msg($('aMsg'),'Roster/devices saved, but PIN update failed: '+(e.message||e),false);
+      });
+    } else {
+      db.rpin=newRpin||db.rpin; db.apin=newApin||db.apin; save();
+      fillDevices(); fillOutstanding(); gateStats();
+      msg($('aMsg'),'Settings saved in this browser.',true);
+    }
   };
   $('aStaffFile').onchange=function(){ var inp=this; readFile(inp,function(rows){
     var add=rows.map(function(c){return [c[0]||'',c[1]||'',c[2]||'']}).filter(function(a){return a[0]});
@@ -609,8 +668,24 @@
 
   $('gAdminToggle').onclick=function(){ var b=$('gAdminBox'); b.style.display = b.style.display==='none'?'block':'none'; };
   $('gAdminBtn').onclick=function(){
-    if($('gPin').value.trim()!==db.apin) return msg($('gMsg'),'Incorrect admin PIN.',false);
-    enter({admin:true});
+    var pin=$('gPin').value.trim();
+    if(!pin) return msg($('gMsg'),'Enter the admin PIN.',false);
+    $('gAdminBtn').disabled=true;
+    if(fbReady){
+      callFn('verifyPin',{role:'admin',pin:pin}).then(function(res){
+        return window.firebase.auth().signInWithCustomToken(res.data.token);
+      }).then(function(){
+        $('gAdminBtn').disabled=false; $('gPin').value='';
+        enter({admin:true});
+      }).catch(function(e){
+        $('gAdminBtn').disabled=false;
+        msg($('gMsg'),(e&&e.message)||'Incorrect admin PIN.',false);
+      });
+    } else {
+      $('gAdminBtn').disabled=false;
+      if(pin!==db.apin) return msg($('gMsg'),'Incorrect admin PIN.',false);
+      enter({admin:true});
+    }
   };
   $('gPin').addEventListener('keydown',function(e){ if(e.key==='Enter') $('gAdminBtn').click(); });
   $('signOut').onclick=function(){
