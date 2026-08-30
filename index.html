@@ -228,7 +228,7 @@
           <button class="small" id="aFbPush">Upload current data to cloud</button>
           <button class="small" id="aFbOff">Disconnect</button>
         </div>
-        <div class="hint" id="aFbStat" style="margin-top:8px">Not connected — data is saved in this browser only.</div>
+        <div class="hint" id="aFbStat" style="margin-top:8px">Connecting to cloud database…</div>
       </details>
 
       <details>
@@ -258,12 +258,12 @@
   var DEF={
     staff:[["AEDC/1001","Wale Adeyemi","08030000001"],["AEDC/1002","Linda Okoro","08030000002"],["AEDC/1003","Musa Ibrahim","08030000003"]],
     devices:["Wale Device","Linda Device","Musa Device","Field Tablet 01"],
-    receivers:["AEDC/1003"], rpin:"2468", apin:"1234", url:"", fb:"", records:[]
+    receivers:["AEDC/1003"], rpin:"2468", apin:"1234", url:"", fb:"{\"apiKey\":\"AIzaSyDuAkIFfmLuO_dhfvhI99GZ2vvnoZUqHbU\",\"authDomain\":\"device-collection-database.firebaseapp.com\",\"projectId\":\"device-collection-database\",\"storageBucket\":\"device-collection-database.firebasestorage.app\",\"messagingSenderId\":\"808096059718\",\"appId\":\"1:808096059718:web:bee185d0a2ba4bf1559547\",\"measurementId\":\"G-2LVL2LK8P9\"}", records:[]
   };
   var db;
   try{ db=JSON.parse(localStorage.getItem(K))||JSON.parse(JSON.stringify(DEF)); }
   catch(e){ db=JSON.parse(JSON.stringify(DEF)); }
-  if(!('fb' in db)) db.fb='';
+  if(!db.fb) db.fb=DEF.fb; /* fall back to built-in Firebase config when none saved */
   function save(){ try{localStorage.setItem(K,JSON.stringify(db));}catch(e){} }
 
   function $(i){return document.getElementById(i)}
