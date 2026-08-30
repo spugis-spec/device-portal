@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Staff Mobile Device Collection Portal</title>
+<title>Mobile Device Collection &amp; Tracking Portal</title>
 <style>
   :root{
     --bg:#0d1b2a; --panel:#132a41; --panel2:#0f2135; --line:#22456b;
@@ -57,20 +57,39 @@
   body.locked header, body.locked main, body.locked footer{display:none}
   body.unlocked #gate{display:none}
   #gate{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:18px;
-    background:linear-gradient(160deg,#1a53bd,#0c3585);overflow:auto}
-  .card{width:100%;max-width:430px;background:#fff;color:#123;border-radius:18px;padding:34px 28px;
-    box-shadow:0 22px 50px rgba(0,0,0,.28);text-align:center}
-  .brand{font-size:2.6rem;font-weight:900;letter-spacing:-2px;color:#12377e;margin:0 0 18px}
-  .card h2{font-size:1.35rem;color:#12377e;margin:0 0 8px;font-weight:800}
-  .card p.sub{color:#5b6b80;font-size:.92rem;margin:0 0 22px}
+    background:radial-gradient(1200px 600px at 20% 0%,#2a6ae0,#0c3585 60%,#08245c);overflow:auto}
+  .card{width:100%;max-width:430px;background:#fff;color:#123;border-radius:20px;padding:30px 26px;
+    box-shadow:0 22px 50px rgba(0,0,0,.32);text-align:center;animation:rise .45s ease both}
+  @keyframes rise{from{opacity:0;transform:translateY(18px) scale(.98)}to{opacity:1;transform:none}}
+  .brand{display:flex;align-items:center;justify-content:center;gap:10px;margin:0 0 14px}
+  .brand .logo{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#12377e,#2a6ae0);
+    color:#fff;font-weight:900;display:flex;align-items:center;justify-content:center;font-size:1rem;letter-spacing:-1px}
+  .brand span{font-size:1.6rem;font-weight:900;letter-spacing:-1px;color:#12377e}
+  .card h2{font-size:1.3rem;color:#12377e;margin:0 0 6px;font-weight:800;line-height:1.25}
+  .card p.sub{color:#5b6b80;font-size:.9rem;margin:0 0 18px}
   .card label{display:block;text-align:left;text-transform:none;letter-spacing:0;font-size:.9rem;
     font-weight:700;color:#213a5c;margin:0 0 6px}
-  .card input{background:#fff;color:#123;border:1px solid #cfd8e3;border-radius:8px;padding:13px}
-  .card button{width:100%;margin-top:16px;padding:14px;border:0;border-radius:8px;background:#12377e;color:#fff;
-    font-weight:800;letter-spacing:1px;font-size:1rem;cursor:pointer}
+  .card input{background:#fff;color:#123;border:1px solid #cfd8e3;border-radius:10px;padding:13px;transition:.18s}
+  .card input:focus{outline:0;border-color:#2a6ae0;box-shadow:0 0 0 4px rgba(42,106,224,.15)}
+  .card button{width:100%;margin-top:16px;padding:14px;border:0;border-radius:10px;background:#12377e;color:#fff;
+    font-weight:800;letter-spacing:1px;font-size:1rem;cursor:pointer;transition:.18s}
+  .card button:hover{background:#0d2a63;transform:translateY(-1px)}
+  .card button:disabled{background:#a9b6c9;cursor:not-allowed;transform:none}
   .card button.ghost{background:transparent;color:#5b6b80;font-weight:600;letter-spacing:0;font-size:.85rem;margin-top:10px;padding:8px}
+  .card button.ghost:hover{background:#f1f4f9;color:#12377e;transform:none}
   .card .msg{text-align:left}
-  .card .foot{color:#9aa8b8;font-size:.78rem;margin-top:22px}
+  .card .foot{color:#9aa8b8;font-size:.78rem;margin-top:20px}
+  .idcard{display:none;align-items:center;gap:12px;text-align:left;margin-top:14px;padding:12px;
+    border-radius:12px;background:#eef4ff;border:1px solid #cddcfa;animation:rise .3s ease both}
+  .idcard.show{display:flex}
+  .idcard .av{width:42px;height:42px;border-radius:50%;background:#12377e;color:#fff;font-weight:800;
+    display:flex;align-items:center;justify-content:center;flex:0 0 42px}
+  .idcard b{display:block;color:#12377e;font-size:.95rem}
+  .idcard small{color:#5b6b80;font-size:.8rem}
+  .gstats{display:flex;gap:8px;margin-top:16px}
+  .gstats div{flex:1;background:#f4f7fc;border:1px solid #e2e9f4;border-radius:12px;padding:10px 6px}
+  .gstats b{display:block;color:#12377e;font-size:1.25rem}
+  .gstats small{color:#7b8aa0;font-size:.68rem;text-transform:uppercase;letter-spacing:.5px}
   .who{margin-top:16px;color:var(--muted);font-size:.78rem}
   .who b{color:var(--ink)}
   .notice{margin-top:10px;padding:10px;border-radius:10px;font-size:.85rem;display:none}
@@ -82,12 +101,17 @@
 
 <div id="gate">
   <div class="card">
-    <p class="brand">AEDC</p>
-    <h2>MDC Staff Credential Portal</h2>
-    <p class="sub">Enter your Staff ID card number to access the device collection portal.</p>
-    <label for="gId">Staff ID</label>
+    <p class="brand"><span class="logo">AEDC</span><span>Device Portal</span></p>
+    <h2>Mobile Device Collection &amp; Tracking</h2>
+    <p class="sub" id="gGreet">Enter your Staff ID card number to sign out or return a device.</p>
+    <label for="gId">Staff ID card number</label>
     <input id="gId" autocomplete="off" placeholder="e.g. AEDC/1001" />
-    <button id="gBtn">CHECK</button>
+    <div class="idcard" id="gCard">
+      <div class="av" id="gAv">--</div>
+      <div><b id="gName"></b><small id="gMeta"></small></div>
+    </div>
+    <div class="gstats" id="gStats"></div>
+    <button id="gBtn" disabled>CONTINUE</button>
     <button class="ghost" id="gAdminToggle">Admin login</button>
     <div id="gAdminBox" style="display:none">
       <label for="gPin" style="margin-top:10px">Admin PIN</label>
@@ -95,12 +119,13 @@
       <button id="gAdminBtn">Sign in as admin</button>
     </div>
     <div class="msg" id="gMsg"></div>
-    <p class="foot">MDC Staff Credential Portal</p>
+    <p class="foot">Device Collection &amp; Tracking Portal</p>
   </div>
 </div>
 
+
 <header>
-  <h1>Staff Mobile Device Collection Portal</h1>
+  <h1>Mobile Device Collection &amp; Tracking Portal</h1>
   <p>GIS Enumeration &amp; Asset Mapping</p>
   <div class="who" id="hWho"></div>
 </header>
@@ -178,14 +203,34 @@
     <div id="aPanel" style="display:none">
       <label for="aStaff">Staff roster — one per line: IDcard, Full name, Phone</label>
       <textarea id="aStaff" rows="7"></textarea>
+      <div class="row" style="align-items:center">
+        <div><label for="aStaffFile">Bulk import staff (CSV: IDcard, Name, Phone)</label><input type="file" id="aStaffFile" accept=".csv,text/csv" /></div>
+        <div><label><input type="checkbox" id="aStaffAppend" style="width:auto;margin-right:8px" checked />Add to existing list</label></div>
+      </div>
       <label for="aDevs">Device register — one device name per line</label>
       <textarea id="aDevs" rows="6"></textarea>
+      <div class="row" style="align-items:center">
+        <div><label for="aDevFile">Bulk import devices (CSV: device name in first column)</label><input type="file" id="aDevFile" accept=".csv,text/csv" /></div>
+        <div><label><input type="checkbox" id="aDevAppend" style="width:auto;margin-right:8px" checked />Add to existing list</label></div>
+      </div>
       <div class="row">
         <div><label for="aRec">Receiving officer ID(s), comma separated</label><input id="aRec" /></div>
         <div><label for="aRpin">Receiving officer PIN</label><input id="aRpin" /></div>
         <div><label for="aApin">Admin login PIN</label><input id="aApin" /></div>
       </div>
       <button class="act" id="aSave">Save settings</button>
+      <details open>
+        <summary>Cloud database (Firebase)</summary>
+        <p class="hint" style="margin-top:8px">Paste the <b>firebaseConfig</b> object from your Firebase project (Project settings → Your apps → Web app). Staff, devices and every collection/return are then stored in Firestore and shared live across all phones.</p>
+        <textarea id="aFb" rows="8" placeholder='{ "apiKey": "...", "authDomain": "yourapp.firebaseapp.com", "projectId": "yourapp", "appId": "..." }'></textarea>
+        <div class="row" style="margin-top:10px">
+          <button class="small" id="aFbSave">Connect &amp; sync</button>
+          <button class="small" id="aFbPush">Upload current data to cloud</button>
+          <button class="small" id="aFbOff">Disconnect</button>
+        </div>
+        <div class="hint" id="aFbStat" style="margin-top:8px">Not connected — data is saved in this browser only.</div>
+      </details>
+
       <details>
         <summary>Full database (all dates)</summary>
         <div class="tablewrap"><table id="aTable">
@@ -205,7 +250,7 @@
     </div>
   </section>
 </main>
-<footer>Records are stored in this browser and, if configured, in your Google Sheet.</footer>
+<footer>Records are saved in this browser and, when Firebase is connected, in your cloud database.</footer>
 
 <script>
 (function(){
@@ -213,12 +258,14 @@
   var DEF={
     staff:[["AEDC/1001","Wale Adeyemi","08030000001"],["AEDC/1002","Linda Okoro","08030000002"],["AEDC/1003","Musa Ibrahim","08030000003"]],
     devices:["Wale Device","Linda Device","Musa Device","Field Tablet 01"],
-    receivers:["AEDC/1003"], rpin:"2468", apin:"1234", url:"", records:[]
+    receivers:["AEDC/1003"], rpin:"2468", apin:"1234", url:"", fb:"", records:[]
   };
   var db;
   try{ db=JSON.parse(localStorage.getItem(K))||JSON.parse(JSON.stringify(DEF)); }
   catch(e){ db=JSON.parse(JSON.stringify(DEF)); }
+  if(!('fb' in db)) db.fb='';
   function save(){ try{localStorage.setItem(K,JSON.stringify(db));}catch(e){} }
+
   function $(i){return document.getElementById(i)}
   function today(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
   function clock(){var d=new Date();return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}
@@ -229,6 +276,79 @@
     if(!db.url) return;
     try{ fetch(db.url,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(rec)}); }catch(e){}
   }
+
+  /* ---------- Firebase (Firestore) cloud database ---------- */
+  var FS=null, fbReady=false;
+  function fbStat(t){ var el=$('aFbStat'); if(el) el.textContent=t; }
+  function loadScript(src){ return new Promise(function(res,rej){
+    var s=document.createElement('script'); s.src=src; s.onload=res; s.onerror=rej; document.head.appendChild(s); }); }
+  function parseCfg(txt){
+    txt=String(txt||'').trim();
+    if(!txt) return null;
+    var i=txt.indexOf('{'), j=txt.lastIndexOf('}');
+    if(i<0||j<0) return null;
+    txt=txt.slice(i,j+1);
+    try{ return JSON.parse(txt); }catch(e){}
+    try{ return (new Function('return ('+txt+')'))(); }catch(e){ return null; }
+  }
+  function fbConnect(quiet){
+    var cfg=parseCfg(db.fb);
+    if(!cfg||!cfg.projectId){ if(!quiet) fbStat('Could not read that Firebase config — paste the whole firebaseConfig object.'); return; }
+    fbStat('Connecting to '+cfg.projectId+'…');
+    var base='https://www.gstatic.com/firebasejs/10.12.2/';
+    var chain = window.firebase ? Promise.resolve()
+      : loadScript(base+'firebase-app-compat.js').then(function(){ return loadScript(base+'firebase-firestore-compat.js'); });
+    chain.then(function(){
+      if(!window.firebase.apps.length) window.firebase.initializeApp(cfg);
+      FS=window.firebase.firestore(); fbReady=true;
+      fbStat('Connected to '+cfg.projectId+' — syncing live.');
+      FS.collection('portal').doc('settings').onSnapshot(function(d){
+        var v=d.data(); if(!v) return;
+        if(v.staff) db.staff=v.staff.map(function(s){return [s.idcard,s.name,s.phone]});
+        if(v.devices) db.devices=v.devices;
+        if(v.receivers) db.receivers=v.receivers;
+        if(v.rpin) db.rpin=v.rpin; if(v.apin) db.apin=v.apin;
+        save(); fillDevices(); gateStats();
+      },function(e){ fbStat('Cloud read error: '+e.message); });
+      FS.collection('records').onSnapshot(function(sn){
+        var a=[]; sn.forEach(function(d){ a.push(d.data()); });
+        a.sort(function(x,y){ return (x.date+x.outTime) < (y.date+y.outTime) ? -1 : 1; });
+        db.records=a; save(); fillDevices(); fillOutstanding(); renderLog(); gateStats(); renderAdminTable();
+      },function(e){ fbStat('Cloud read error: '+e.message); });
+    }).catch(function(e){ fbStat('Could not load Firebase: '+(e.message||e)); });
+  }
+  function fbSaveRecord(rec){ if(fbReady&&FS) FS.collection('records').doc(rec.id).set(JSON.parse(JSON.stringify(rec))).catch(function(e){fbStat('Cloud write error: '+e.message)}); }
+  function fbSaveSettings(){
+    if(!(fbReady&&FS)) return;
+    FS.collection('portal').doc('settings').set({
+      staff: db.staff.map(function(s){return {idcard:s[0]||'',name:s[1]||'',phone:s[2]||''}}),
+      devices: db.devices, receivers: db.receivers, rpin: db.rpin, apin: db.apin
+    }).then(function(){ fbStat('Settings saved to cloud.'); }).catch(function(e){ fbStat('Cloud write error: '+e.message); });
+  }
+  function fbPushAll(){
+    if(!(fbReady&&FS)) return fbStat('Connect to Firebase first.');
+    fbSaveSettings();
+    for(var i=0;i<db.records.length;i++) fbSaveRecord(db.records[i]);
+    fbStat('Uploaded '+db.records.length+' records + settings to cloud.');
+  }
+
+  /* ---------- CSV import ---------- */
+  function parseCsv(text){
+    var lines=String(text).replace(/\r/g,'').split('\n'), out=[];
+    for(var i=0;i<lines.length;i++){
+      var l=lines[i].trim(); if(!l) continue;
+      var cells=l.split(',').map(function(c){return c.trim().replace(/^"|"$/g,'')});
+      if(i===0 && /id\s*card|idcard|staff\s*id|device/i.test(l) && /name|phone|device/i.test(l)) continue;
+      out.push(cells);
+    }
+    return out;
+  }
+  function readFile(input,cb){
+    var f=input.files&&input.files[0]; if(!f) return;
+    var r=new FileReader(); r.onload=function(){ cb(parseCsv(r.result)); input.value=''; }; r.readAsText(f);
+  }
+
+
 
   // tabs
   var tabs=document.querySelectorAll('nav button[data-tab]');
@@ -280,7 +400,7 @@
     if(h){ availability(); return msg(m,'Device unavailable — '+dev+' is still with '+h.name+' ('+h.idcard+') since '+h.date+' '+h.outTime+'. Please pick another device.',false); }
     var rec={id:'R'+Date.now(),date:today(),device:dev,idcard:s[0],name:s[1],phone:s[2],
       outTime:clock(),note:$('cNote').value.trim(),inTime:'',submittedBy:'',receivedBy:''};
-    db.records.push(rec); save(); push(Object.assign({action:'collect'},rec));
+    db.records.push(rec); save(); fbSaveRecord(rec); push(Object.assign({action:'collect'},rec));
     msg(m,'Collection recorded: '+dev+' by '+s[1]+' at '+rec.outTime+'.',true);
     $('cNote').value='';$('cDev').value='';
     fillDevices();
@@ -302,7 +422,7 @@
     if(!$('sChk').checked) return msg(m,'Tick the confirmation that the device was physically received.',false);
     for(var i=0;i<db.records.length;i++){ var r=db.records[i];
       if(r.id===rid){ r.inTime=clock(); r.returnDate=today(); r.submittedBy=sub[0]+' - '+sub[1];
-        r.receivedBy=norm($('sRec').value); save(); push(Object.assign({action:'return'},r));
+        r.receivedBy=norm($('sRec').value); save(); fbSaveRecord(r); push(Object.assign({action:'return'},r));
         msg(m,'Return confirmed: '+r.device+' submitted by '+sub[1]+' at '+r.inTime+'.',true);
         $('sSub').value='';$('sChk').checked=false; fillOutstanding(); fillDevices(); return; } }
     msg(m,'Record not found.',false);
@@ -336,29 +456,57 @@
   }
   $('lCsv').onclick=function(){var d=$('lDate').value||today();csv(rowsFor(d),'device-log-'+d+'.csv')};
 
-  $('aBtn').onclick=function(){
-    if($('aPin').value.trim()!==db.apin){ return msg($('aMsg'),'Wrong admin PIN.',false); }
-    $('aMsg').className='msg'; $('aPanel').style.display='block';
-    $('aStaff').value=db.staff.map(function(s){return s.join(', ')}).join('\n');
-    $('aDevs').value=db.devices.join('\n');
-    $('aRec').value=db.receivers.join(', '); $('aRpin').value=db.rpin; $('aApin').value=db.apin; $('aUrl').value=db.url||'';
-    var tb=$('aTable').querySelector('tbody'); tb.innerHTML='';
+  function renderAdminTable(){
+    var t=$('aTable'); if(!t) return; var tb=t.querySelector('tbody'); tb.innerHTML='';
     for(var i=db.records.length-1;i>=0;i--){var r=db.records[i];var tr=document.createElement('tr');
       tr.innerHTML='<td>'+r.date+'</td><td>'+r.device+'</td><td>'+r.name+' ('+r.idcard+')</td><td>'+r.outTime+'</td><td>'+(r.inTime||'—')+'</td><td>'+(r.submittedBy||'—')+'</td><td>'+(r.receivedBy||'—')+'</td>';
       tb.appendChild(tr);}
     if(!tb.children.length) tb.innerHTML='<tr><td colspan="7">No records yet.</td></tr>';
+  }
+  function fillAdminFields(){
+    $('aStaff').value=db.staff.map(function(s){return s.join(', ')}).join('\n');
+    $('aDevs').value=db.devices.join('\n');
+    $('aRec').value=db.receivers.join(', '); $('aRpin').value=db.rpin; $('aApin').value=db.apin;
+    $('aUrl').value=db.url||''; $('aFb').value=db.fb||'';
+  }
+  $('aBtn').onclick=function(){
+    if($('aPin').value.trim()!==db.apin){ return msg($('aMsg'),'Wrong admin PIN.',false); }
+    $('aMsg').className='msg'; $('aPanel').style.display='block';
+    fillAdminFields(); renderAdminTable();
   };
   $('aSave').onclick=function(){
     db.staff=$('aStaff').value.split('\n').map(function(l){return l.split(',').map(function(x){return x.trim()})}).filter(function(a){return a[0]});
     db.devices=$('aDevs').value.split('\n').map(function(l){return l.trim()}).filter(Boolean);
     db.receivers=$('aRec').value.split(',').map(function(x){return x.trim()}).filter(Boolean);
     db.rpin=$('aRpin').value.trim()||db.rpin;
-    db.apin=$('aApin').value.trim()||db.apin; save(); fillDevices(); fillOutstanding();
-    msg($('aMsg'),'Settings saved.',true);
+    db.apin=$('aApin').value.trim()||db.apin; save(); fbSaveSettings(); fillDevices(); fillOutstanding(); gateStats();
+    msg($('aMsg'),'Settings saved'+(fbReady?' and synced to the cloud.':' in this browser.'),true);
   };
+  $('aStaffFile').onchange=function(){ var inp=this; readFile(inp,function(rows){
+    var add=rows.map(function(c){return [c[0]||'',c[1]||'',c[2]||'']}).filter(function(a){return a[0]});
+    var cur=$('aStaffAppend').checked ? db.staff.slice() : [];
+    for(var i=0;i<add.length;i++){ var dup=false;
+      for(var j=0;j<cur.length;j++) if(norm(cur[j][0])===norm(add[i][0])){ cur[j]=add[i]; dup=true; }
+      if(!dup) cur.push(add[i]); }
+    db.staff=cur; save(); fbSaveSettings(); fillAdminFields(); gateStats();
+    msg($('aMsg'),'Imported '+add.length+' staff rows. Roster now has '+db.staff.length+' staff.',true);
+  }); };
+  $('aDevFile').onchange=function(){ var inp=this; readFile(inp,function(rows){
+    var add=rows.map(function(c){return (c[0]||'').trim()}).filter(Boolean);
+    var cur=$('aDevAppend').checked ? db.devices.slice() : [];
+    for(var i=0;i<add.length;i++) if(cur.indexOf(add[i])<0) cur.push(add[i]);
+    db.devices=cur; save(); fbSaveSettings(); fillAdminFields(); fillDevices(); gateStats();
+    msg($('aMsg'),'Imported '+add.length+' devices. Register now has '+db.devices.length+' devices.',true);
+  }); };
+  $('aFbSave').onclick=function(){ db.fb=$('aFb').value.trim(); save(); fbConnect(false); };
+  $('aFbPush').onclick=function(){ fbPushAll(); };
+  $('aFbOff').onclick=function(){ db.fb=''; save(); fbReady=false; FS=null; fbStat('Disconnected — data is saved in this browser only. Reload the page to fully detach.'); };
   $('aUrlSave').onclick=function(){db.url=$('aUrl').value.trim();save();msg($('aMsg'),'Sheet endpoint saved.',true)};
   $('aCsv').onclick=function(){csv(db.records,'device-database.csv')};
-  $('aWipe').onclick=function(){if(confirm('Delete ALL records?')){db.records=[];save();msg($('aMsg'),'All records cleared.',true);fillDevices();fillOutstanding();}};
+  $('aWipe').onclick=function(){if(confirm('Delete ALL records?')){
+    if(fbReady&&FS){ for(var i=0;i<db.records.length;i++) FS.collection('records').doc(db.records[i].id).delete(); }
+    db.records=[];save();msg($('aMsg'),'All records cleared.',true);fillDevices();fillOutstanding();renderAdminTable();}};
+
 
   /* ---------- Login gate ---------- */
   var SK='smdcp_session';
@@ -372,12 +520,41 @@
     if(!session.admin){ $('cId').value=session.idcard; $('cWho').textContent='✔ '+session.name+' · '+session.phone; }
     fillDevices(); renderLog();
   }
+  function gateStats(){
+    var free=0,out=0;
+    for(var i=0;i<db.devices.length;i++){ if(holderOf(db.devices[i])) out++; else free++; }
+    var mine=0, id=norm($('gId').value);
+    for(var j=0;j<db.records.length;j++){ var r=db.records[j]; if(!r.inTime&&norm(r.idcard)===id) mine++; }
+    $('gStats').innerHTML='<div><b>'+free+'</b><small>Available</small></div>'+
+      '<div><b>'+out+'</b><small>Signed out</small></div>'+
+      '<div><b>'+mine+'</b><small>With you</small></div>';
+  }
+  function greet(){var h=new Date().getHours();return h<12?'Good morning':h<17?'Good afternoon':'Good evening'}
+  function gateLookup(){
+    var v=$('gId').value.trim(), s=findStaff(v), c=$('gCard');
+    if(s){
+      c.className='idcard show';
+      $('gAv').textContent=(s[1]||'').split(' ').map(function(w){return w[0]}).slice(0,2).join('').toUpperCase();
+      $('gName').textContent=s[1]; $('gMeta').textContent=s[0]+' · '+s[2];
+      $('gGreet').textContent=greet()+', '+String(s[1]).split(' ')[0]+'. Ready to sign out a device?';
+      $('gBtn').disabled=false; $('gBtn').textContent='CONTINUE AS '+String(s[1]).split(' ')[0].toUpperCase();
+      $('gMsg').className='msg';
+    } else {
+      c.className='idcard';
+      $('gGreet').textContent='Enter your Staff ID card number to sign out or return a device.';
+      $('gBtn').disabled=true; $('gBtn').textContent='CONTINUE';
+      if(v) msg($('gMsg'),'No staff record matches that ID card number yet.',false); else $('gMsg').className='msg';
+    }
+    gateStats();
+  }
+  $('gId').addEventListener('input',gateLookup);
   $('gBtn').onclick=function(){
     var s=findStaff($('gId').value);
     if(!s) return msg($('gMsg'),'Staff ID not found. Please check your ID card number or contact the administrator.',false);
     enter({admin:false,idcard:s[0],name:s[1],phone:s[2]});
   };
-  $('gId').addEventListener('keydown',function(e){ if(e.key==='Enter') $('gBtn').click(); });
+  $('gId').addEventListener('keydown',function(e){ if(e.key==='Enter'&&!$('gBtn').disabled) $('gBtn').click(); });
+
   $('gAdminToggle').onclick=function(){ var b=$('gAdminBox'); b.style.display = b.style.display==='none'?'block':'none'; };
   $('gAdminBtn').onclick=function(){
     if($('gPin').value.trim()!==db.apin) return msg($('gMsg'),'Incorrect admin PIN.',false);
@@ -391,7 +568,8 @@
     $('sPanel').style.display='none';
   };
 
-  $('lDate').value=today(); fillDevices(); renderLog();
+  $('lDate').value=today(); fillDevices(); renderLog(); gateStats();
+  if(db.fb) fbConnect(true);
   try{ var sess=JSON.parse(sessionStorage.getItem(SK)); if(sess) enter(sess); }catch(e){}
 
 })();
