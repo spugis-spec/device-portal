@@ -106,6 +106,26 @@
   .notice{margin-top:10px;padding:10px;border-radius:10px;font-size:.85rem;display:none}
   .notice.show{display:block;background:rgba(229,72,77,.15);border:1px solid var(--danger)}
   .notice.show.free{background:rgba(47,163,107,.15);border:1px solid var(--ok)}
+
+  /* Availability list — colour works on mobile too (option colours are ignored by
+     iOS/Android native pickers, so we render our own colour-coded list). */
+  .devlist{margin-top:10px;display:flex;flex-direction:column;gap:8px}
+  .devrow{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;
+    border:1px solid var(--line);background:var(--panel2);font-size:.88rem;font-weight:600}
+  .devrow .nm{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
+  .devrow .tag{flex:0 0 auto;font-size:.7rem;font-weight:800;letter-spacing:.4px;
+    padding:3px 9px;border-radius:999px;text-transform:uppercase}
+  .devrow.free{border-color:var(--ok);background:rgba(47,163,107,.12);color:#136c43}
+  .devrow.free .tag{background:rgba(47,163,107,.22);color:#0f7a4a}
+  .devrow.busy{border-color:var(--danger);background:rgba(229,72,77,.10);color:#a3282c}
+  .devrow.busy .tag{background:rgba(229,72,77,.2);color:#c0292d}
+  .devrow.sel{box-shadow:0 0 0 3px rgba(42,106,224,.22)}
+  .devrow input[type=checkbox]{width:auto;flex:0 0 auto;transform:scale(1.35);margin:0 2px 0 0}
+  .devrow small{display:block;font-weight:500;font-size:.74rem;color:var(--muted);white-space:normal}
+  .selbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px}
+  .selcount{font-size:.8rem;color:var(--muted);font-weight:700}
+  select option.opt-free{color:#0f7a4a}
+  select option.opt-busy{color:#c0292d}
 </style>
 </head>
 <body class="locked">
@@ -163,6 +183,7 @@
     <div class="selfinfo" id="cSelfInfo"></div>
     <label for="cDev">Device to collect</label>
     <select id="cDev"><option value="">-- select device --</option></select>
+    <div class="devlist" id="cDevList"></div>
     <div class="notice" id="cAvail"></div>
     <label for="cNote">Purpose / area (optional)</label>
     <input id="cNote" placeholder="e.g. Kubwa Feeder enumeration" />
@@ -186,10 +207,16 @@
     <div class="msg" id="sMsg"></div>
     <div id="sPanel" style="display:none">
       <label for="sSub">Submitting staff ID card number</label>
-      <input id="sSub" autocomplete="off" placeholder="Staff returning the device" />
-      <label for="sDev">Outstanding device</label>
-      <select id="sDev"><option value="">-- select --</option></select>
-      <label><input type="checkbox" id="sChk" style="width:auto;margin-right:8px" />Device physically received &amp; checked</label>
+      <input id="sSub" autocomplete="off" placeholder="Staff returning the device(s)" />
+      <div id="sSubWho" class="hint" style="margin:6px 0 0"></div>
+      <label>Outstanding devices — tick every device being returned</label>
+      <div class="selbar">
+        <button class="small" type="button" id="sSelMine">Select all for this staff ID</button>
+        <button class="small" type="button" id="sSelNone">Clear selection</button>
+        <span class="selcount" id="sCount">0 selected</span>
+      </div>
+      <div class="devlist" id="sDevList"></div>
+      <label><input type="checkbox" id="sChk" style="width:auto;margin-right:8px" />All ticked devices physically received &amp; checked</label>
       <button class="act green" id="sBtn">Confirm Return</button>
       <div class="msg" id="sMsg2"></div>
     </div>
@@ -404,16 +431,39 @@
   }
   function fillDevices(){
     var s=$('cDev'), keep=s.value; s.innerHTML='<option value="">-- select device --</option>';
-    for(var i=0;i<db.devices.length;i++){
-      var h=holderOf(db.devices[i]);
-      var o=document.createElement('option'); o.value=db.devices[i];
-      o.textContent=db.devices[i]+(h?' — UNAVAILABLE (signed out)':' — available');
-      o.style.color = h ? '#c0292d' : '#0f7a4a';
-      o.style.fontWeight = '600';
-      s.appendChild(o);
+    var free=[], busy=[], i, h;
+    for(i=0;i<db.devices.length;i++){ h=holderOf(db.devices[i]); (h?busy:free).push([db.devices[i],h]); }
+    function group(label, arr, cls, mark, suffix){
+      if(!arr.length) return;
+      var g=document.createElement('optgroup'); g.label=label;
+      for(var k=0;k<arr.length;k++){
+        var o=document.createElement('option'); o.value=arr[k][0];
+        o.textContent=mark+' '+arr[k][0]+suffix;
+        o.className=cls; o.style.color=(cls==='opt-busy'?'#c0292d':'#0f7a4a'); o.style.fontWeight='600';
+        g.appendChild(o);
+      }
+      s.appendChild(g);
     }
-    s.value=keep; availability();
+    group('\u2705 Available', free, 'opt-free', '\u2705', ' \u2014 available');
+    group('\u26D4 Unavailable (signed out)', busy, 'opt-busy', '\u26D4', ' \u2014 UNAVAILABLE');
+    s.value=keep;
+    renderDeviceList();
+    availability();
   }
+  /* Native mobile pickers ignore option colours, so we also render our own
+     colour-coded availability list that looks identical on phone and desktop. */
+  function renderDeviceList(){
+    var wrap=$('cDevList'); if(!wrap) return;
+    var sel=$('cDev').value, html='';
+    for(var i=0;i<db.devices.length;i++){
+      var d=db.devices[i], h=holderOf(d);
+      html+='<div class="devrow '+(h?'busy':'free')+(sel===d?' sel':'')+'" data-dev="'+esc(d)+'">'+
+        '<span class="nm">'+esc(d)+(h?'<small>With '+esc(h.name)+' \u00b7 '+esc(h.idcard)+' since '+esc(h.date)+' '+esc(h.outTime)+'</small>':'')+'</span>'+
+        '<span class="tag">'+(h?'Unavailable':'Available')+'</span></div>';
+    }
+    wrap.innerHTML=html||'<div class="hint">No devices in the register yet.</div>';
+  }
+  function esc(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
   function availability(){
     var n=$('cAvail'), dev=$('cDev').value;
     if(!dev){ n.className='notice'; n.textContent=''; return; }
@@ -422,11 +472,34 @@
       n.textContent='⚠ '+dev+' is not available. It was signed out by '+h.name+' ('+h.idcard+', '+h.phone+') on '+h.date+' at '+h.outTime+' and has not been returned yet.'; }
     else { n.className='notice show free'; n.textContent='✔ '+dev+' is available for collection.'; }
   }
-  $('cDev').addEventListener('change',availability);
+  $('cDev').addEventListener('change',function(){ availability(); renderDeviceList(); });
+  document.addEventListener('click',function(e){
+    var row=e.target.closest?e.target.closest('#cDevList .devrow'):null;
+    if(!row) return;
+    $('cDev').value=row.getAttribute('data-dev'); availability(); renderDeviceList();
+  });
   function fillOutstanding(){
-    var s=$('sDev'); s.innerHTML='<option value="">-- select --</option>';
-    for(var i=0;i<db.records.length;i++){var r=db.records[i];
-      if(!r.inTime){var o=document.createElement('option');o.value=r.id;o.textContent=r.device+' — '+r.name+' ('+r.date+' '+r.outTime+')';s.appendChild(o)}}
+    var wrap=$('sDevList'); if(!wrap) return;
+    var checked=selectedReturnIds(), html='', n=0;
+    for(var i=0;i<db.records.length;i++){ var r=db.records[i];
+      if(r.inTime) continue; n++;
+      html+='<label class="devrow busy"><input type="checkbox" class="sdev-chk" value="'+esc(r.id)+'"'+
+        (checked.indexOf(r.id)>=0?' checked':'')+' />'+
+        '<span class="nm">'+esc(r.device)+'<small>'+esc(r.name)+' \u00b7 '+esc(r.idcard)+' \u00b7 out '+esc(r.date)+' '+esc(r.outTime)+'</small></span>'+
+        '<span class="tag">Outstanding</span></label>';
+    }
+    wrap.innerHTML = n ? html : '<div class="hint">Nothing is outstanding right now.</div>';
+    updateReturnCount();
+  }
+  function selectedReturnIds(){
+    var out=[], b=document.querySelectorAll('#sDevList .sdev-chk');
+    for(var i=0;i<b.length;i++) if(b[i].checked) out.push(b[i].value);
+    return out;
+  }
+  function updateReturnCount(){
+    var el=$('sCount'); if(!el) return;
+    var n=selectedReturnIds().length;
+    el.textContent = n+' selected';
   }
 
 
@@ -439,7 +512,7 @@
     if(!s) return msg(m,'Invalid ID card number. Contact admin.',false);
     if(!dev) return msg(m,'Please select a device.',false);
     var mine=outstandingFor(s[0]);
-    if(mine) return msg(m,s[1]+' already has "'+mine.device+'" signed out (since '+mine.date+' '+mine.outTime+') and has not returned it yet. Return that device before collecting another.',false);
+    if(mine && !window.confirm(s[1]+' already has "'+mine.device+'" signed out (since '+mine.date+' '+mine.outTime+').\n\nCollect '+dev+' as an additional device?')) return;
     var h=holderOf(dev);
     if(h){ availability(); return msg(m,'Device unavailable — '+dev+' is still with '+h.name+' ('+h.idcard+') since '+h.date+' '+h.outTime+'. Please pick another device.',false); }
     var ok=window.confirm('Please confirm:\n\n'+s[1]+' ('+s[0]+')\nis collecting: '+dev+'\n\nClick OK to finalize this collection.');
@@ -471,17 +544,51 @@
     });
   };
 
+  $('sSub').addEventListener('input',function(){
+    var s=findStaff(this.value);
+    $('sSubWho').textContent = s ? ('\u2714 '+s[1]+' \u00b7 '+s[2]) : (this.value?'ID not found in staff roster':'');
+  });
+  $('sDevList').addEventListener('change',function(e){
+    if(e.target.classList.contains('sdev-chk')){
+      e.target.closest('.devrow').classList.toggle('sel', e.target.checked);
+      updateReturnCount();
+    }
+  });
+  $('sSelMine').onclick=function(){
+    var sub=findStaff($('sSub').value);
+    if(!sub) return msg($('sMsg2'),'Enter a valid submitting staff ID card number first.',false);
+    var b=document.querySelectorAll('#sDevList .sdev-chk'), hit=0;
+    for(var i=0;i<b.length;i++){
+      var rec=recordById(b[i].value);
+      if(rec && norm(rec.idcard)===norm(sub[0])){ b[i].checked=true; b[i].closest('.devrow').classList.add('sel'); hit++; }
+    }
+    updateReturnCount();
+    msg($('sMsg2'), hit ? ('Ticked '+hit+' outstanding device(s) held by '+sub[1]+'.') : ('No outstanding devices found for '+sub[1]+'.'), !!hit);
+  };
+  $('sSelNone').onclick=function(){
+    var b=document.querySelectorAll('#sDevList .sdev-chk');
+    for(var i=0;i<b.length;i++){ b[i].checked=false; b[i].closest('.devrow').classList.remove('sel'); }
+    updateReturnCount();
+  };
+  function recordById(id){ for(var i=0;i<db.records.length;i++) if(db.records[i].id===id) return db.records[i]; return null; }
+
   $('sBtn').onclick=function(){
-    var m=$('sMsg2'), sub=findStaff($('sSub').value), rid=$('sDev').value;
+    var m=$('sMsg2'), sub=findStaff($('sSub').value), ids=selectedReturnIds();
     if(!sub) return msg(m,'Submitting staff ID not recognised.',false);
-    if(!rid) return msg(m,'Select the device being returned.',false);
-    if(!$('sChk').checked) return msg(m,'Tick the confirmation that the device was physically received.',false);
-    for(var i=0;i<db.records.length;i++){ var r=db.records[i];
-      if(r.id===rid){ r.inTime=clock(); r.returnDate=today(); r.submittedBy=sub[0]+' - '+sub[1];
-        r.receivedBy=norm($('sRec').value); save(); fbSaveRecord(r); push(Object.assign({action:'return'},r));
-        msg(m,'Return confirmed: '+r.device+' submitted by '+sub[1]+' at '+r.inTime+'.',true);
-        $('sSub').value='';$('sChk').checked=false; fillOutstanding(); fillDevices(); return; } }
-    msg(m,'Record not found.',false);
+    if(!ids.length) return msg(m,'Tick at least one device being returned.',false);
+    if(!$('sChk').checked) return msg(m,'Tick the confirmation that the devices were physically received.',false);
+    var names=[], t=clock(), d=today(), rid=norm($('sRec').value);
+    for(var i=0;i<ids.length;i++){
+      var r=recordById(ids[i]); if(!r||r.inTime) continue;
+      r.inTime=t; r.returnDate=d; r.submittedBy=sub[0]+' - '+sub[1]; r.receivedBy=rid;
+      fbSaveRecord(r); push(Object.assign({action:'return'},r));
+      names.push(r.device);
+    }
+    if(!names.length) return msg(m,'Those devices were already returned.',false);
+    save();
+    msg(m,names.length+' device(s) returned by '+sub[1]+' at '+t+': '+names.join(', ')+'.',true);
+    $('sSub').value=''; $('sSubWho').textContent=''; $('sChk').checked=false;
+    fillOutstanding(); fillDevices(); renderLog();
   };
 
   function rowsFor(date){var a=[];for(var i=0;i<db.records.length;i++) if(db.records[i].date===date) a.push(db.records[i]);return a}
