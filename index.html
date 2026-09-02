@@ -316,6 +316,8 @@
   function clock(){var d=new Date();return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}
   function norm(s){return String(s||'').trim().toUpperCase()}
   function findStaff(id){id=norm(id);for(var i=0;i<db.staff.length;i++){if(norm(db.staff[i][0])===id)return db.staff[i]}return null}
+  function hideId(){return '\u2022\u2022\u2022\u2022'}
+
   function msg(el,text,ok){el.textContent=text;el.className='msg show '+(ok?'ok':'err');}
   function push(rec){
     if(!db.url) return;
@@ -602,7 +604,14 @@
       uniqueDevices[r.device]=true;
       if(f==='out'&&r.inTime) continue; if(f==='in'&&!r.inTime) continue;
       var tr=document.createElement('tr');
-      tr.innerHTML='<td>'+r.device+'</td><td>'+r.name+'</td><td class="idcol">'+r.idcard+'</td><td>'+r.phone+'</td><td>'+r.outTime+'</td><td>'+(r.inTime||'—')+'</td><td>'+(r.submittedBy||'—')+'</td><td>'+(r.receivedBy||'—')+'</td><td><span class="pill '+(r.inTime?'in':'out')+'">'+(r.inTime?'Returned':'Outstanding')+'</span></td><td>'+(r.note||'—')+'</td><td class="admincol"><button class="del-btn" data-id="'+r.id+'">Delete</button></td>';
+      var isAdmin=!!(CURRENT&&CURRENT.admin);
+      var subTxt=r.submittedBy||'—', recTxt=r.receivedBy||'—';
+      if(!isAdmin){
+        if(r.submittedBy){ var p=String(r.submittedBy).split(' - '); subTxt=p.length>1?p.slice(1).join(' - '):hideId(p[0]); }
+        if(r.receivedBy){ var rs=findStaff(r.receivedBy); recTxt=rs?rs[1]:hideId(r.receivedBy); }
+      }
+      tr.innerHTML='<td>'+r.device+'</td><td>'+r.name+'</td><td class="idcol">'+r.idcard+'</td><td>'+r.phone+'</td><td>'+r.outTime+'</td><td>'+(r.inTime||'—')+'</td><td>'+subTxt+'</td><td>'+recTxt+'</td><td><span class="pill '+(r.inTime?'in':'out')+'">'+(r.inTime?'Returned':'Outstanding')+'</span></td><td>'+(r.note||'—')+'</td><td class="admincol"><button class="del-btn" data-id="'+r.id+'">Delete</button></td>';
+
       tb.appendChild(tr);
     }
     if(!tb.children.length) tb.innerHTML='<tr><td colspan="11">No records for this date.</td></tr>';
