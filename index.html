@@ -175,6 +175,7 @@
   <section id="collect" class="active">
     <h2>Sign out a device</h2>
     <p class="hint">Enter your ID card number and select the device you are collecting.</p>
+    <div class="msg" id="cStartNote"></div>
     <div id="cIdWrap">
       <label for="cId">Staff ID card number</label>
       <input id="cId" inputmode="numeric" autocomplete="off" placeholder="e.g. AEDC/1234" />
@@ -263,6 +264,9 @@
         <div><label for="aRpin">Receiving officer PIN</label><input id="aRpin" /></div>
         <div><label for="aApin">Admin login PIN</label><input id="aApin" /></div>
       </div>
+      <div class="row">
+        <div><label for="aStart">Earliest sign-out time (devices cannot be collected before this)</label><input id="aStart" type="time" /></div>
+      </div>
       <button class="act" id="aSave">Save settings</button>
       <details open>
         <summary>Cloud database (Firebase)</summary>
@@ -303,11 +307,12 @@
   var DEF={
     staff:[["AEDC/1001","Wale Adeyemi","08030000001"],["AEDC/1002","Linda Okoro","08030000002"],["AEDC/1003","Musa Ibrahim","08030000003"]],
     devices:["Wale Device","Linda Device","Musa Device","Field Tablet 01"],
-    receivers:["AEDC/1003"], url:"", fb:"{\"apiKey\":\"AIzaSyDuAkIFfmLuO_dhfvhI99GZ2vvnoZUqHbU\",\"authDomain\":\"device-collection-database.firebaseapp.com\",\"projectId\":\"device-collection-database\",\"storageBucket\":\"device-collection-database.firebasestorage.app\",\"messagingSenderId\":\"808096059718\",\"appId\":\"1:808096059718:web:bee185d0a2ba4bf1559547\",\"measurementId\":\"G-2LVL2LK8P9\"}", records:[]
+    receivers:["AEDC/1003"], url:"", startTime:"08:00", fb:"{\"apiKey\":\"AIzaSyDuAkIFfmLuO_dhfvhI99GZ2vvnoZUqHbU\",\"authDomain\":\"device-collection-database.firebaseapp.com\",\"projectId\":\"device-collection-database\",\"storageBucket\":\"device-collection-database.firebasestorage.app\",\"messagingSenderId\":\"808096059718\",\"appId\":\"1:808096059718:web:bee185d0a2ba4bf1559547\",\"measurementId\":\"G-2LVL2LK8P9\"}", records:[]
   };
   var db, CURRENT=null;
   try{ db=JSON.parse(localStorage.getItem(K))||JSON.parse(JSON.stringify(DEF)); }
   catch(e){ db=JSON.parse(JSON.stringify(DEF)); }
+  if(!db.startTime) db.startTime='08:00'; /* earliest time devices may be signed out */
   if(!db.fb) db.fb=DEF.fb; /* fall back to built-in Firebase config when none saved */
   function save(){ try{localStorage.setItem(K,JSON.stringify(db));}catch(e){} }
 
@@ -362,7 +367,8 @@
         if(v.staff) db.staff=v.staff.map(function(s){return [s.idcard,s.name,s.phone]});
         if(v.devices) db.devices=v.devices;
         if(v.receivers) db.receivers=v.receivers;
-        save(); fillDevices(); gateStats();
+        if(v.startTime) db.startTime=v.startTime;
+        save(); fillDevices(); gateStats(); startNotice();
       },function(e){ fbStat('Cloud read error: '+e.message); });
       FS.collection('records').onSnapshot(function(sn){
         var a=[]; sn.forEach(function(d){ a.push(d.data()); });
@@ -385,7 +391,7 @@
     if(!(fbReady&&FS)) return;
     FS.collection('portal').doc('settings').set({
       staff: db.staff.map(function(s){return {idcard:s[0]||'',name:s[1]||'',phone:s[2]||''}}),
-      devices: db.devices, receivers: db.receivers
+      devices: db.devices, receivers: db.receivers, startTime: db.startTime||'08:00'
     }).then(function(){ fbStat('Settings saved to cloud.'); }).catch(function(e){ fbStat('Cloud write error: '+e.message); });
   }
   function fbPushAll(){
@@ -509,8 +515,27 @@
     var s=findStaff(this.value); $('cWho').textContent = s? ('✔ '+s[1]+' · '+s[2]) : (this.value?'ID not found in staff roster':'');
   });
 
+  function startMins(){ var t=(db.startTime||'08:00').split(':'); return (parseInt(t[0],10)||0)*60+(parseInt(t[1],10)||0); }
+  function beforeStart(){ var d=new Date(); return (d.getHours()*60+d.getMinutes()) < startMins(); }
+  function prettyStart(){
+    var t=(db.startTime||'08:00').split(':'), h=parseInt(t[0],10)||0, ap=h<12?'AM':'PM', h12=h%12; if(h12===0) h12=12;
+    return h12+':'+(t[1]||'00')+' '+ap;
+  }
+  function startNotice(){
+    var el=$('cStartNote'); if(!el) return;
+    if(beforeStart()){
+      el.className='msg show err';
+      el.textContent='\u23F0 Sign-out opens at '+prettyStart()+'. It is not yet time to collect a device \u2014 you can browse available devices in the meantime. Returns are accepted at any time.';
+    } else { el.className='msg'; el.textContent=''; }
+  }
+  setInterval(startNotice, 30000);
+
   $('cBtn').onclick=function(){
     var m=$('cMsg'), s=findStaff($('cId').value), dev=$('cDev').value;
+    if(beforeStart()){
+      if(!(CURRENT&&CURRENT.admin)) return msg(m,'\u23F0 Not yet time to sign out devices. Collection opens at '+prettyStart()+' (now '+clock()+'). Please come back then \u2014 returns can be done any time.',false);
+      if(!window.confirm('It is before the '+prettyStart()+' sign-out time.\n\nOverride as administrator and record this collection anyway?')) return;
+    }
     if(!s) return msg(m,'Invalid ID card number. Contact admin.',false);
     if(!dev) return msg(m,'Please select a device.',false);
     var mine=outstandingFor(s[0]);
@@ -665,6 +690,7 @@
     $('aStaff').value=db.staff.map(function(s){return s.join(', ')}).join('\n');
     $('aDevs').value=db.devices.join('\n');
     $('aRec').value=db.receivers.join(', ');
+    $('aStart').value=db.startTime||'08:00';
     $('aApin').value=''; $('aApin').placeholder='Leave blank to keep current PIN (min 6 chars)';
     $('aRpin').value=''; $('aRpin').disabled=true;
     $('aRpin').placeholder='Change in Firebase Console → Authentication → receiver@device-portal.local';
@@ -688,7 +714,9 @@
     db.staff=$('aStaff').value.split('\n').map(function(l){return l.split(',').map(function(x){return x.trim()})}).filter(function(a){return a[0]});
     db.devices=$('aDevs').value.split('\n').map(function(l){return l.trim()}).filter(Boolean);
     db.receivers=$('aRec').value.split(',').map(function(x){return x.trim()}).filter(Boolean);
-    save();
+    var st=($('aStart').value||'').trim();
+    db.startTime=/^\d{2}:\d{2}$/.test(st)?st:'08:00';
+    save(); startNotice();
     var newApin=$('aApin').value.trim();
     fbSaveSettings();
     var tasks=[];
@@ -762,7 +790,7 @@
     document.querySelector('nav button[data-tab="admin"]').style.display = session.admin?'':'none';
     if(!session.admin){ $('cWho').textContent='✔ '+session.name+' · '+session.phone; }
     updateIdentityUI();
-    fillDevices(); renderLog(); fillOutstanding();
+    fillDevices(); renderLog(); fillOutstanding(); startNotice();
   }
   function gateStats(){
     var free=0,out=0;
